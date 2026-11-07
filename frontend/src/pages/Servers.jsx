@@ -12,6 +12,7 @@ import BackupsDialog from "../components/BackupsDialog.jsx";
 import CreateServerDialog from "../components/CreateServerDialog.jsx";
 import ServerManage from "../components/ServerManage.jsx";
 import "../components/servers.css";
+import { api } from "../api.js";
 
 const STATUS_LABELS = {
   pulling: "Downloading image",
@@ -176,6 +177,7 @@ export default function Servers() {
   const [deleting, setDeleting] = useState(null);
   const [backupsFor, setBackupsFor] = useState(null);
   const [creatingVanilla, setCreatingVanilla] = useState(false);
+  const [publicRoutes, setPublicRoutes] = useState({});
 
   const refresh = useCallback(() => {
     listServers()
@@ -184,6 +186,10 @@ export default function Servers() {
         setError("");
       })
       .catch((e) => setError(e.message));
+    api
+      .publicRoutes()
+      .then((routes) => setPublicRoutes(Object.fromEntries(routes.map((r) => [r.server_id, r]))))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -247,6 +253,12 @@ export default function Servers() {
                 {s.port > 0 && (
                   <div className="mcsm-small">
                     Address: <code>{host}:{s.port}</code>
+                    {publicRoutes[s.id] && (
+                      <>
+                        {" · "}Public: <code>{publicRoutes[s.id].hostname}</code>
+                        {publicRoutes[s.id].mode === "tunnel" && <span className="mcsm-muted"> (via tunnel)</span>}
+                      </>
+                    )}
                   </div>
                 )}
                 {s.error && !s.build && <div className="mcsm-error mcsm-small">{s.error}</div>}

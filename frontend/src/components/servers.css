@@ -115,6 +115,7 @@ a.mcsm-button {
   .mcsm-row { flex-direction: column; }
   .mcsm-manage { padding: 14px; }
 }
+.mcsm-command { flex: 1; padding: 6px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); word-break: break-all; }
 
 /* ---- CurseForge link import ---- */
 .mcsm-import { max-width: 560px; }

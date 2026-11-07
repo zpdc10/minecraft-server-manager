@@ -83,6 +83,30 @@ and optionally delete ones older than N days. Manual backups are never deleted a
   `appdata/minecraft-server-manager/backups`; point it at a share to keep backups off the cache drive), otherwise
   `$DATA_DIR/backups`. The folder can also be changed on the Settings page. Backups stay when a server is deleted.
 
+## Public addresses with Cloudflare
+
+Settings › **Cloudflare** links the app to your Cloudflare account with an API token (permissions:
+Account › Cloudflare Tunnel › Edit, Zone › DNS › Edit, Zone › Zone › Read, limited to your domain). The app then
+gives each new server an address such as `survival.example.com` (turn this off to add them by hand on the server's
+**Public address** tab), updates it when the server's port changes, and deletes it when the server is deleted.
+
+- **Its own tunnel.** The app makes a tunnel named `minecraft-server-manager` and runs a `mcsm_cloudflared`
+  container for it (host networking, so it reaches every server at `localhost:<port>`). Tunnels, connectors and DNS
+  records you already have are never edited; DNS records the app makes carry the comment
+  "Managed by Minecraft Server Manager", and it only deletes records it made.
+- **Tunnel mode (default).** A proxied CNAME to the tunnel plus a `tcp://localhost:<port>` route. Nothing is opened on
+  the router and the home IP stays hidden. Minecraft Java speaks raw TCP, which a Cloudflare tunnel only carries to
+  clients running cloudflared, so each player installs it once and runs
+  `cloudflared access tcp --hostname survival.example.com --url 127.0.0.1:25565`, then joins `127.0.0.1:25565`.
+  The only way around that on Cloudflare is Spectrum, a paid add-on.
+- **Direct mode.** A DNS-only A record to your public IP (detected and re-checked every 10 minutes, or a fixed IP or
+  hostname you enter) plus a `_minecraft._tcp` SRV record with the server's port. Players type the address into
+  Minecraft with nothing to install, but you must forward the port on your router and the address reveals your IP.
+- **Names** are one level below the domain (`name.example.com`), because Cloudflare's free certificate doesn't cover
+  deeper names. **Disconnect** removes every address the app made, its tunnel and its container.
+- The manager's own web UI is not published. If you put it on your existing tunnel, protect it with Cloudflare
+  Access, since the app has no login.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -100,6 +124,9 @@ and optionally delete ones older than N days. Manual backups are never deleted a
 | `BACKUP_DIR` | `/backups` if mapped, else `$DATA_DIR/backups` | Backup folder. A folder chosen on the Settings page overrides this |
 | `BACKUP_FLUSH_WAIT` | `3` | Seconds to wait after `save-all flush` before copying the world |
 | `BACKUP_SCHEDULER` | `true` | Set to `false` to turn scheduled backups off for this install |
+| `CLOUDFLARE_API_TOKEN` | (empty) | Cloudflare API token. A token saved on the Settings page overrides this |
+| `CLOUDFLARE_SYNC` | `true` | Set to `false` to stop the 10-minute check of tunnel ports and the public IP |
+| `CLOUDFLARED_IMAGE` | `cloudflare/cloudflared:latest` | Image for the app's tunnel connector |
 | `MODRINTH_API_URL` | `https://api.modrinth.com/v2` | Override the Modrinth API base URL |
 
 ## How servers work
@@ -200,6 +227,12 @@ Dockerfile           multi-stage build: UI, then Python runtime
 | `POST /api/custom-packs/{id}/mods` | Add a mod and its dependencies: `{source, project_id, version_id?}` |
 | `DELETE /api/custom-packs/{id}/mods/{source}/{project_id}` | Remove a mod and dependencies only it needed |
 | `GET /api/custom-packs/{id}/export/mrpack` · `/curseforge` | Download the pack; warnings in the `X-Pack-Warnings` header |
+| `GET /api/cloudflare` · `DELETE` | Cloudflare link status / disconnect and remove everything the app made |
+| `PUT /api/cloudflare/token` | Save a token `{api_token}`; returns the domains it can see |
+| `PUT /api/cloudflare/config` | `{zone_id, auto_route, default_mode: tunnel\|direct, direct_target}`; sets up the tunnel and connector |
+| `POST /api/cloudflare/sync` | Repair the connector and bring ports and IPs up to date |
+| `GET /api/cloudflare/routes` | Public addresses with player instructions |
+| `PUT /api/cloudflare/routes/{server_id}` · `DELETE` | Create or change `{subdomain, mode}` / remove a server's address |
 | `GET /api/health` | Health check |
 
 ## Development
