@@ -11,7 +11,8 @@ Servers run on the [`itzg/minecraft-server`](https://github.com/itzg/docker-mine
 - [x] CurseForge search and installs (needs an API key, set in Settings or via `CF_API_KEY`)
 - [x] Build servers from client-only packs: install, test-start, and remove client-only or crashing mods automatically
 - [x] Pack builder: assemble a custom pack from Modrinth and CurseForge mods, run it as a server, export it for launchers
-- [ ] Console, backups, whitelist, remote access
+- [x] World backups: manual and scheduled, with retention, restore, download and a configurable backup folder
+- [ ] Console, whitelist, remote access
 
 ## Install on Unraid
 
@@ -62,6 +63,26 @@ code are also remembered on that install (`learned-mods.json` in `DATA_DIR`) and
 builds; they are listed on the Settings page, where they can be forgotten. Copy entries from there into
 `known-mods.json` to share them with every install.
 
+## Backups
+
+Each server card has a **Backups** button. From there you can back up now, restore, download or delete a backup,
+and turn on scheduled backups (every 30 minutes to every week) with retention: keep the newest N automatic backups
+and optionally delete ones older than N days. Manual backups are never deleted automatically.
+
+- **What is saved.** "World only" (the default) saves the world folders (`world`, `world_nether`, `world_the_end`
+  and any other folder with a `level.dat`) plus `server.properties`, the whitelist, ops and ban lists.
+  "Whole server folder" saves everything except logs and crash reports.
+- **Consistency.** While a running server is backed up, the app pauses world saving with RCON
+  (`save-off`, `save-all flush`), copies the files, then turns saving back on. If RCON isn't reachable the backup is
+  still taken and marked as possibly inconsistent.
+- **Restore.** The server is stopped, a "before restore" safety backup of the current world is taken, the backup is
+  unpacked into a staging folder and swapped in, and the server is started again if it was running.
+- **Format.** Backups are plain zip files named `<server>_<UTC time>_<kind>.zip`, so they can be opened or restored
+  by hand. Scheduled backups of a stopped server that hasn't changed are skipped.
+- **Where.** `/backups` if it is mapped into the container (the Unraid template maps it, defaulting to
+  `appdata/minecraft-server-manager/backups`; point it at a share to keep backups off the cache drive), otherwise
+  `$DATA_DIR/backups`. The folder can also be changed on the Settings page. Backups stay when a server is deleted.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -76,6 +97,9 @@ builds; they are listed on the Settings page, where they can be forgotten. Copy 
 | `BUILD_MAX_ATTEMPTS` | `10` | Test starts the server builder tries before giving up |
 | `BUILD_MAX_REMOVALS` | `15` | Most mods the builder removes for crashes in one build |
 | `BUILD_INSTALL_TIMEOUT` / `BUILD_START_TIMEOUT` | `3600` / `1200` | Seconds to wait for the pack install / for the server to start |
+| `BACKUP_DIR` | `/backups` if mapped, else `$DATA_DIR/backups` | Backup folder. A folder chosen on the Settings page overrides this |
+| `BACKUP_FLUSH_WAIT` | `3` | Seconds to wait after `save-all flush` before copying the world |
+| `BACKUP_SCHEDULER` | `true` | Set to `false` to turn scheduled backups off for this install |
 | `MODRINTH_API_URL` | `https://api.modrinth.com/v2` | Override the Modrinth API base URL |
 
 ## How servers work

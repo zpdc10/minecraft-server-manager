@@ -104,8 +104,100 @@ export default function Settings() {
         </form>
         {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
       </section>
+      <BackupLocation />
       <KnownMods />
     </div>
+  );
+}
+
+const LOCATION_SOURCES = {
+  settings: "chosen here",
+  env: "from the BACKUP_DIR container variable",
+  default: "default",
+};
+
+function formatBytes(n) {
+  if (n == null) return "?";
+  const gb = n / 1024 ** 3;
+  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(n / 1024 ** 2).toFixed(0)} MB`;
+}
+
+function BackupLocation() {
+  const [loc, setLoc] = useState(null);
+  const [path, setPath] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    api
+      .backupLocation()
+      .then(setLoc)
+      .catch((e) => setMessage({ error: true, text: e.message }));
+  }, []);
+
+  async function save(value) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const l = await api.saveBackupLocation(value);
+      setLoc(l);
+      setPath("");
+      setMessage({ error: false, text: value ? "Saved. New backups go to this folder." : "Back to the default folder." });
+    } catch (e) {
+      setMessage({ error: true, text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <h2>Backup folder</h2>
+      <p className="muted">
+        World backups are saved here, one subfolder per server. To keep them on an Unraid share instead of appdata, map
+        a share (for example <code>/mnt/user/backups/minecraft</code>) to <code>/backups</code> in the container
+        settings; it's used automatically. You can also enter any folder that is mapped into the container. Existing
+        backups are not moved when you change this.
+      </p>
+      {loc && (
+        <p>
+          Now: <code>{loc.host_path || loc.path}</code>
+          {loc.host_path && loc.host_path !== loc.path && (
+            <span className="muted">
+              {" "}
+              (<code>{loc.path}</code> in the container)
+            </span>
+          )}{" "}
+          <span className="muted">· {LOCATION_SOURCES[loc.source] ?? loc.source}</span>
+          <br />
+          {loc.writable ? (
+            <span className="muted">
+              {formatBytes(loc.free_bytes)} free of {formatBytes(loc.total_bytes)}
+            </span>
+          ) : (
+            <span className="error">The app can't write to this folder.</span>
+          )}
+        </p>
+      )}
+      <form
+        className="key-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save(path.trim());
+        }}
+      >
+        <input placeholder="/backups" value={path} onChange={(e) => setPath(e.target.value)} />
+        <button className="primary" type="submit" disabled={busy || !path.trim()}>
+          Save
+        </button>
+        {loc?.source === "settings" && (
+          <button type="button" disabled={busy} onClick={() => save("")}>
+            Use default
+          </button>
+        )}
+      </form>
+      {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
+    </section>
   );
 }
 

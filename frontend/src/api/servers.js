@@ -33,6 +33,20 @@ export const deleteServer = (id, deleteData = false) =>
 export const getBuild = (id) => request(`/${encodeURIComponent(id)}/build`);
 export const getLogs = (id, tail = 300) => request(`/${encodeURIComponent(id)}/logs?tail=${tail}`);
 
+// World backups
+const backups = (id) => `/${encodeURIComponent(id)}/backups`;
+export const listBackups = (id) => request(backups(id));
+export const createBackup = (id, scope = "") =>
+  request(backups(id), { method: "POST", body: JSON.stringify({ scope }) });
+export const saveBackupSchedule = (id, schedule) =>
+  request(`${backups(id)}/schedule`, { method: "PUT", body: JSON.stringify(schedule) });
+export const restoreBackup = (id, backupId) =>
+  request(`${backups(id)}/${encodeURIComponent(backupId)}/restore`, { method: "POST" });
+export const deleteBackup = (id, backupId) =>
+  request(`${backups(id)}/${encodeURIComponent(backupId)}`, { method: "DELETE" });
+export const backupDownloadUrl = (id, backupId) =>
+  `/api/servers${backups(id)}/${encodeURIComponent(backupId)}/download`;
+
 // ---- Management tools (console, players, properties, settings, stats, mods) ----
 const sid = (id) => `/${encodeURIComponent(id)}`;
 const json = (method, body) => ({ method, body: JSON.stringify(body) });
