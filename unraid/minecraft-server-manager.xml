@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>minecraft-server-manager</Name>
+  <Repository>ghcr.io/zpdc10/minecraft-server-manager:latest</Repository>
+  <Registry>https://github.com/zpdc10/minecraft-server-manager/pkgs/container/minecraft-server-manager</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/zpdc10/minecraft-server-manager/issues</Support>
+  <Project>https://github.com/zpdc10/minecraft-server-manager</Project>
+  <Overview>Search Modrinth and CurseForge for Minecraft modpacks and run each one as its own server container.</Overview>
+  <Category>GameServers:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/zpdc10/minecraft-server-manager/main/unraid/icon.png</Icon>
+  <Config Name="Web UI port" Target="8080" Default="8080" Mode="tcp" Description="Port for the web UI." Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Docker socket" Target="/var/run/docker.sock" Default="/var/run/docker.sock" Mode="rw" Description="Lets the app create and manage Minecraft server containers." Type="Path" Display="advanced" Required="true" Mask="false">/var/run/docker.sock</Config>
+  <Config Name="App data" Target="/data" Default="/mnt/user/appdata/minecraft-server-manager" Mode="rw" Description="Settings and state for the manager." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/minecraft-server-manager</Config>
+  <Config Name="CurseForge API key" Target="CF_API_KEY" Default="" Mode="" Description="Optional. Needed for CurseForge search; get one at console.curseforge.com." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+</Container>
