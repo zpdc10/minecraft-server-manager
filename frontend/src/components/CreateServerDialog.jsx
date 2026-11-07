@@ -21,7 +21,7 @@ function nextFreePort(servers) {
  * Form for creating a server from a modpack (or a plain vanilla server).
  *
  * Props: open, onClose(), onCreated(server), and the pack being installed:
- * source ("modrinth" | "curseforge" | "vanilla"), projectId, projectSlug,
+ * source ("modrinth" | "curseforge" | "cfimport" | "custom" | "vanilla"), projectId, projectSlug,
  * versionId, title, minecraftVersion, loader, and clientOnly (the pack has no
  * server version, so the server builder must strip client mods).
  */
@@ -97,7 +97,9 @@ export default function CreateServerDialog({
         {source !== "vanilla" && (
           <p className="mcsm-muted">
             {title || projectSlug || projectId}
-            {source === "custom" ? " (your custom pack)" : ` from ${source === "curseforge" ? "CurseForge" : "Modrinth"}`}
+            {source === "custom"
+              ? " (your custom pack)"
+              : ` from ${source === "modrinth" ? "Modrinth" : "CurseForge"}`}
             {minecraftVersion && ` · Minecraft ${minecraftVersion}`}
             {loader && ` · ${loader}`}
           </p>

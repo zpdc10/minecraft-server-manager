@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import APP_VERSION, settings
 from .providers import ProviderError
-from .routers import backups, cloudflare, custom_packs, mod_db, search, server_admin, servers, similar
+from .routers import backups, cf_import, cloudflare, custom_packs, mod_db, search, server_admin, servers, similar
 from .routers import settings as settings_router
 
 
@@ -47,6 +47,7 @@ app.include_router(custom_packs.router)
 app.include_router(similar.router)
 app.include_router(backups.router)
 app.include_router(cloudflare.router)
+app.include_router(cf_import.router)
 
 
 @app.exception_handler(ProviderError)

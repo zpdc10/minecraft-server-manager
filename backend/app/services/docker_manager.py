@@ -761,13 +761,22 @@ class DockerManager:
                 os.chown(self._local_data_path(info.id), self.settings.mc_uid, self.settings.mc_gid)
             except (PermissionError, OSError):
                 pass  # not fatal: itzg fixes ownership of /data on start when run as root
+            build = None
             if info.source == "custom":
                 self._install_custom_pack(info)
+            elif info.source == "cfimport":
+                env, build = self._install_cf_import(info, env)
+                if build is None:
+                    return
             if auto_fix:
                 from .server_builder import ServerBuilder
 
-                ServerBuilder(self).run(info, env)
+                ServerBuilder(self).run(info, env, build)
             else:
+                if build is not None:
+                    build.phase, build.message = "passed", "Pack downloaded; the server is starting without a test run."
+                    build.finished_at = datetime.now(UTC).isoformat(timespec="seconds")
+                    self.finish_build(info.id, build)
                 self.create_container(info, env)
         except (DockerException, OSError, RuntimeError) as e:
             log.exception("Failed to create server %s", info.id)
@@ -785,6 +794,47 @@ class DockerManager:
         notes = pack_install.install(pack, self._local_data_path(info.id), self.settings.mc_uid, self.settings.mc_gid)
         for note in notes:
             log.info("Server %s: %s", info.id, note)
+
+    def _install_cf_import(self, info: ServerInfo, env: dict[str, str]):
+        """Download an imported CurseForge pack into the server folder.
+
+        Returns (env with the loader settings, the build record so far), or
+        (env, None) when the download failed and the server was marked as errored.
+        """
+        from . import cf_import
+
+        build = BuildInfo(
+            phase="installing",
+            message="Downloading the modpack",
+            max_attempts=self.settings.build_max_attempts,
+            started_at=datetime.now(UTC).isoformat(timespec="seconds"),
+        )
+
+        def progress(message: str) -> None:
+            build.message = message
+            self._set_pending(info.id, status="installing", build=build.model_copy())
+            self.save_build(info.id, build)
+
+        progress("Downloading the modpack")
+        try:
+            loader_env, notes, _ = cf_import.install(
+                info.project_id,
+                info.version_id,
+                self._local_data_path(info.id),
+                self.settings.mc_uid,
+                self.settings.mc_gid,
+                progress=progress,
+            )
+        except cf_import.PackImportError as e:
+            build.phase, build.message = "failed", f"Importing the pack failed: {e}"
+            build.finished_at = datetime.now(UTC).isoformat(timespec="seconds")
+            self.finish_build(info.id, build)
+            self._set_pending(info.id, status="error", error=build.message, build=build)
+            return env, None
+        build.notes = notes
+        self.save_build(info.id, build)
+        # The user's own extra variables still win over the pack's loader settings.
+        return {**env, **{k: v for k, v in loader_env.items() if k not in env}}, build
 
     def start_server(self, server_id: str) -> ServerInfo:
         c = self._require(server_id)

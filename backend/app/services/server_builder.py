@@ -170,13 +170,12 @@ class ServerBuilder:
 
     # ---- the build ---------------------------------------------------------------
 
-    def run(self, info: ServerInfo, env: dict[str, str]) -> None:
-        build = BuildInfo(
-            phase="installing",
-            message="Downloading the modpack and its mods",
-            max_attempts=self.settings.build_max_attempts,
-            started_at=_now(),
-        )
+    def run(self, info: ServerInfo, env: dict[str, str], build: BuildInfo | None = None) -> None:
+        """Run the build. `build` carries on a record started earlier (e.g. by a pack import)."""
+        if build is None:
+            build = BuildInfo(started_at=_now(), phase="installing")
+        build.phase, build.message = "installing", "Installing the mod loader and the pack's mods"
+        build.max_attempts = self.settings.build_max_attempts
         self.mgr.save_build(info.id, build)
         try:
             self._run(info, env, build)

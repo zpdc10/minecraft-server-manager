@@ -116,3 +116,12 @@ a.mcsm-button {
   .mcsm-manage { padding: 14px; }
 }
 .mcsm-command { flex: 1; padding: 6px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); word-break: break-all; }
+
+/* ---- CurseForge link import ---- */
+.mcsm-import { max-width: 560px; }
+.mcsm-import-link { display: flex; gap: 8px; }
+.mcsm-import-link input { flex: 1; min-width: 0; }
+.mcsm-dialog label.mcsm-import-upload input { padding: 4px; }
+.mcsm-import-pack { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
+.mcsm-import-head { display: flex; gap: 12px; align-items: center; }
+.mcsm-import-head img { border-radius: 8px; object-fit: cover; }
