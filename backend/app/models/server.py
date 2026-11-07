@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-ServerSource = Literal["modrinth", "curseforge", "vanilla"]
+ServerSource = Literal["modrinth", "curseforge", "vanilla", "custom"]
 JavaVersion = Literal["java8", "java11", "java16", "java17", "java21", "latest"]
 ServerStatus = Literal[
     "pulling",  # downloading the server image
@@ -23,7 +23,7 @@ ServerStatus = Literal[
 class CreateServerRequest(BaseModel):
     name: str = Field(min_length=1, max_length=48)
     source: ServerSource = "modrinth"
-    # Modrinth project id/slug, or CurseForge project id. Unused for vanilla.
+    # Modrinth project id/slug, CurseForge project id, or custom pack id. Unused for vanilla.
     project_id: str = ""
     # Slug of the project (CurseForge needs this for CF_SLUG).
     project_slug: str = ""

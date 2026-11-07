@@ -25,6 +25,57 @@ async function send(url, method = "GET", body) {
   return resp.json();
 }
 
+// Fetch a file download and save it in the browser. Returns the export warnings.
+async function download(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    let detail = resp.statusText;
+    try {
+      detail = (await resp.json()).detail ?? detail;
+    } catch {
+      /* not JSON */
+    }
+    throw new Error(detail);
+  }
+  const disposition = resp.headers.get("content-disposition") || "";
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] || "pack.zip";
+  let warnings = [];
+  try {
+    warnings = JSON.parse(resp.headers.get("x-pack-warnings") || "[]");
+  } catch {
+    /* ignore */
+  }
+  const blob = await resp.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  return { name, warnings };
+}
+
+const pack = (id) => `/api/custom-packs/${encodeURIComponent(id)}`;
+
+export const packsApi = {
+  modFilters: (source) => get("/api/mods/filters", { source }),
+  searchMods: (params) => get("/api/mods/search", params),
+  loaderVersions: (loader, mc) => get(`/api/loaders/${loader}/versions`, { minecraft_version: mc }),
+  list: () => get("/api/custom-packs"),
+  get: (id) => get(pack(id)),
+  create: (body) => send("/api/custom-packs", "POST", body),
+  update: (id, body) => send(pack(id), "PUT", body),
+  remove: async (id) => {
+    const resp = await fetch(pack(id), { method: "DELETE" });
+    if (!resp.ok) throw new Error(resp.statusText);
+  },
+  addMod: (id, body) => send(`${pack(id)}/mods`, "POST", body),
+  removeMod: (id, source, projectId) =>
+    send(`${pack(id)}/mods/${source}/${encodeURIComponent(projectId)}`, "DELETE"),
+  exportPack: (id, format) => download(`${pack(id)}/export/${format}`),
+};
+
 export const api = {
   sources: () => get("/api/sources"),
   filters: (source) => get("/api/filters", { source }),

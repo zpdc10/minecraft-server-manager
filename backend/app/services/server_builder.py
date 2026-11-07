@@ -89,9 +89,12 @@ class ServerBuilder:
         files = [r.file for r in removed]
         if not files:
             return dict(env)
+        prefix = {"modrinth": "MODRINTH", "curseforge": "CF"}.get(info.source)
+        if prefix is None:
+            # Custom packs and plain loaders don't re-download mods, so moving the jar is enough.
+            return dict(env)
         paths = [f"mods/{f}" for f in files]
         env = dict(env)
-        prefix = "MODRINTH" if info.source == "modrinth" else "CF"
         if prefix == "MODRINTH":
             env["MODRINTH_EXCLUDE_FILES"] = _join(env.get("MODRINTH_EXCLUDE_FILES", ""), files)
         env[f"{prefix}_IGNORE_MISSING_FILES"] = _join(env.get(f"{prefix}_IGNORE_MISSING_FILES", ""), paths)

@@ -10,6 +10,7 @@ Servers run on the [`itzg/minecraft-server`](https://github.com/itzg/docker-mine
 - [x] Create and manage servers (port, RAM, Java version, start/stop/restart/delete, logs)
 - [x] CurseForge search and installs (needs an API key, set in Settings or via `CF_API_KEY`)
 - [x] Build servers from client-only packs: install, test-start, and remove client-only or crashing mods automatically
+- [x] Pack builder: assemble a custom pack from Modrinth and CurseForge mods, run it as a server, export it for launchers
 - [ ] Console, backups, whitelist, remote access
 
 ## Install on Unraid
@@ -89,6 +90,28 @@ The Java version is picked from the pack's Minecraft version (1.16 and older use
 RAM sets the Java heap; the container memory limit adds 25% (at least 1 GB) of headroom.
 Deleting a server keeps its files unless you tick "also delete files".
 
+## Pack builder
+
+"Build a pack" lets you make your own modpack. Pick a Minecraft version and loader
+(Fabric, Forge, NeoForge or Quilt), then search Modrinth and CurseForge and add mods.
+
+- Each mod is added at its newest stable version for the pack's Minecraft version and loader.
+  Required dependencies are added too, recursively, and reused if they're already in the pack
+  (also across sites, matched by slug). Removing a mod removes dependencies only it needed.
+- The pack shows problems: mods that don't fit the version or loader, missing dependencies,
+  mods marked incompatible with each other, and the same mod added twice.
+- Changing the Minecraft version or loader re-picks a version of every mod.
+- **Create server** copies the server-side mods into the server's `mods` folder (client-only
+  mods are skipped) and runs itzg with `TYPE=FABRIC`/`FORGE`/`NEOFORGE`/`QUILT` and the
+  pack's loader version.
+- **Export .mrpack** makes a Modrinth pack (Modrinth App, Prism, GDLauncher, ATLauncher).
+  **Export CurseForge zip** makes a CurseForge pack (CurseForge app, GDLauncher, Prism).
+  Mods from the other site are matched to the same file by hash where possible (CurseForge
+  matching needs the API key); otherwise their jar is bundled in the pack's `overrides/mods`.
+  CurseForge mods whose authors block outside downloads only make it into the CurseForge zip.
+
+Packs are saved as JSON in `/data/packs`.
+
 ## Project layout
 
 ```
@@ -123,11 +146,20 @@ Dockerfile           multi-stage build: UI, then Python runtime
 | `PUT /api/settings/curseforge` | Save (`{"api_key": "..."}`, checked against CurseForge first) or clear (`""`) the CurseForge key |
 | `POST /api/settings/curseforge/test` | Check the current CurseForge key |
 | `GET /api/servers` | List servers with status |
-| `POST /api/servers` | Create a server: `{name, source, project_id, project_slug, version_id, minecraft_version, port, memory_gb, java_version?}` |
+| `POST /api/servers` | Create a server (`source` `custom` with the pack id as `project_id` for a built pack): `{name, source, project_id, project_slug, version_id, minecraft_version, port, memory_gb, java_version?}` |
 | `GET /api/servers/{id}` | One server |
 | `POST /api/servers/{id}/start` · `/stop` · `/restart` | Control a server |
 | `DELETE /api/servers/{id}?delete_data=false` | Remove a server, optionally with its files |
 | `GET /api/servers/{id}/logs?tail=200` | Recent console output |
+| `GET /api/mods/search?source=&q=&game_version=&loader=&category=&sort=&offset=&limit=` | Search mods |
+| `GET /api/mods/filters?source=` | Mod categories and Minecraft versions |
+| `GET /api/mods/{source}/{id}/versions?game_version=&loader=` | Files of one mod |
+| `GET /api/loaders/{loader}/versions?minecraft_version=` | Loader versions, recommended first |
+| `GET /api/custom-packs` · `POST` | List packs / create `{name, minecraft_version, loader, loader_version?}` |
+| `GET /api/custom-packs/{id}` · `PUT` · `DELETE` | One pack with its problems / edit (changing version or loader re-picks mods) / delete |
+| `POST /api/custom-packs/{id}/mods` | Add a mod and its dependencies: `{source, project_id, version_id?}` |
+| `DELETE /api/custom-packs/{id}/mods/{source}/{project_id}` | Remove a mod and dependencies only it needed |
+| `GET /api/custom-packs/{id}/export/mrpack` · `/curseforge` | Download the pack; warnings in the `X-Pack-Warnings` header |
 | `GET /api/health` | Health check |
 
 ## Development
