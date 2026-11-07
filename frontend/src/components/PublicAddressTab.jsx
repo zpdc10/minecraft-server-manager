@@ -29,12 +29,16 @@ export default function PublicAddressTab({ server }) {
   const [message, setMessage] = useState(null);
 
   async function load() {
-    const [status, routes] = await Promise.all([api.cloudflare(), api.publicRoutes()]);
+    const [status, routes] = await Promise.all([
+      api.cloudflare(),
+      api.publicRoutes(),
+    ]);
     const r = routes.find((x) => x.server_id === server.id) || null;
     setCf(status);
     setRoute(r);
     setSubdomain(r ? r.hostname.split(".")[0] : server.id.replace(/^ext-/, ""));
-    setMode(r ? r.mode : status.default_mode || "tunnel");
+    const linked = !!status.tunnel_id;
+    setMode(r ? r.mode : linked ? status.default_mode || "tunnel" : "playit");
     setPlayitAddress(r?.playit_address || "");
   }
 
@@ -57,21 +61,39 @@ export default function PublicAddressTab({ server }) {
   }
 
   if (cf === null || route === undefined) {
-    return message ? <p className="mcsm-error mcsm-small">{message.text}</p> : <p className="mcsm-muted">Loading...</p>;
+    return message ? (
+      <p className="mcsm-error mcsm-small">{message.text}</p>
+    ) : (
+      <p className="mcsm-muted">Loading...</p>
+    );
   }
-  if (!cf.tunnel_id) {
+  // Cloudflare gives addresses on your domain; without it, playit's own address still works.
+  const linked = !!cf.tunnel_id;
+  if (!linked && !cf.playit_key_set && !route) {
     return (
-      <p className="mcsm-muted">
-        Link your Cloudflare account on the Settings page to give this server an address on your domain.
-      </p>
+      <div className="mcsm-settings">
+        <p>Let players outside your network join this server.</p>
+        <p className="mcsm-muted mcsm-small">
+          On the Settings page, set up <strong>playit.gg</strong> (free, players
+          install nothing, no port forwarding). You can also link{" "}
+          <strong>Cloudflare</strong> to use your own domain name, like
+          survival.yourdomain.com.
+        </p>
+      </div>
     );
   }
 
   const changed =
     route &&
     (route.mode !== mode ||
-      route.hostname.split(".")[0] !== subdomain.trim().toLowerCase() ||
+      (linked &&
+        route.hostname.split(".")[0] !== subdomain.trim().toLowerCase()) ||
       (mode === "playit" && playitAddress.trim() !== route.playit_address));
+  const ownName =
+    route &&
+    route.mode === "playit" &&
+    route.hostname !== route.playit_address &&
+    !!route.target;
 
   return (
     <div className="mcsm-settings">
@@ -96,8 +118,8 @@ export default function PublicAddressTab({ server }) {
                 <Copy text={route.player_command} />
               </div>
               <p className="mcsm-small">
-                Then in Minecraft, add the server <code>127.0.0.1:25565</code>. You can share these steps with your
-                players as they are.
+                Then in Minecraft, add the server <code>127.0.0.1:25565</code>.
+                You can share these steps with your players as they are.
               </p>
             </>
           ) : route.mode === "playit" ? (
@@ -107,10 +129,17 @@ export default function PublicAddressTab({ server }) {
                 <Copy text={route.hostname} />
               </div>
               <p className="mcsm-small">
-                Players type this into Minecraft as is, with nothing to install. It leads to your playit tunnel{" "}
-                <code>{route.playit_address}</code>
-                {route.target && <span className="mcsm-muted"> ({route.target})</span>}. If you change this
-                server&apos;s port, update the tunnel&apos;s local port in the playit dashboard too.
+                Players type this into Minecraft as is, with nothing to install.
+                {ownName && (
+                  <>
+                    {" "}
+                    It leads to your playit tunnel{" "}
+                    <code>{route.playit_address}</code>
+                    <span className="mcsm-muted"> ({route.target})</span>.
+                  </>
+                )}{" "}
+                If you change this server&apos;s port, update the tunnel&apos;s
+                local port in the playit dashboard too.
               </p>
             </>
           ) : (
@@ -120,13 +149,18 @@ export default function PublicAddressTab({ server }) {
                 <Copy text={route.hostname} />
               </div>
               <p className="mcsm-small">
-                Players type this into Minecraft as is. Forward port <strong>{server.port}</strong> (TCP) on your router
-                to your Unraid server, or nobody outside your network can join.
+                Players type this into Minecraft as is. Forward port{" "}
+                <strong>{server.port}</strong> (TCP) on your router to your
+                Unraid server, or nobody outside your network can join.
               </p>
             </>
           )}
           <p className="mcsm-muted mcsm-small">
-            On your own network you can still use <code>{window.location.hostname}:{server.port}</code>.
+            On your own network you can still use{" "}
+            <code>
+              {window.location.hostname}:{server.port}
+            </code>
+            .
           </p>
         </section>
       ) : (
@@ -139,44 +173,78 @@ export default function PublicAddressTab({ server }) {
           e.preventDefault();
           run(
             () =>
-              api.setPublicRoute(server.id, { subdomain: subdomain.trim(), mode, playit_address: playitAddress.trim() }),
-            route ? "Address updated." : "Address created. DNS can take a minute to work everywhere.",
+              api.setPublicRoute(server.id, {
+                subdomain: subdomain.trim(),
+                mode,
+                playit_address: playitAddress.trim(),
+              }),
+            route
+              ? "Address updated."
+              : linked
+                ? "Address created. DNS can take a minute to work everywhere."
+                : "Saved.",
           );
         }}
       >
-        <div className="mcsm-row">
-          <label>
-            Address
-            <span className="mcsm-row" style={{ alignItems: "center", gap: 4 }}>
-              <input value={subdomain} onChange={(e) => setSubdomain(e.target.value)} required maxLength={63} />
-              <span className="mcsm-muted">.{cf.zone_name}</span>
-            </span>
-          </label>
-          <label>
-            Mode
-            <select value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="tunnel">Tunnel</option>
-              <option value="direct">Direct</option>
-              <option value="playit">playit.gg</option>
-            </select>
-          </label>
-        </div>
+        {linked && (
+          <div className="mcsm-row">
+            <label>
+              Address
+              <span
+                className="mcsm-row"
+                style={{ alignItems: "center", gap: 4 }}
+              >
+                <input
+                  value={subdomain}
+                  onChange={(e) => setSubdomain(e.target.value)}
+                  required
+                  maxLength={63}
+                />
+                <span className="mcsm-muted">.{cf.zone_name}</span>
+              </span>
+            </label>
+            <label>
+              Mode
+              <select value={mode} onChange={(e) => setMode(e.target.value)}>
+                <option value="tunnel">Tunnel</option>
+                <option value="direct">Direct</option>
+                <option value="playit">playit.gg</option>
+              </select>
+            </label>
+          </div>
+        )}
         <p className="mcsm-muted mcsm-small">{MODE_HELP[mode]}</p>
+        {!linked && (
+          <p className="mcsm-muted mcsm-small">
+            Players will use playit&apos;s address. Link Cloudflare on the
+            Settings page to use your own domain name instead.
+          </p>
+        )}
         {mode === "playit" && (
           <>
             {!cf.playit_key_set && (
-              <p className="mcsm-error mcsm-small">Add your playit agent key on the Settings page first.</p>
+              <p className="mcsm-error mcsm-small">
+                Add your playit agent key on the Settings page first.
+              </p>
             )}
             <ol className="mcsm-small">
               <li>
                 In the{" "}
-                <a href="https://playit.gg/account/tunnels" target="_blank" rel="noreferrer">
+                <a
+                  href="https://playit.gg/account/tunnels"
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   playit dashboard
                 </a>
-                , add a tunnel: type <strong>Minecraft Java</strong>, agent <strong>this app&apos;s agent</strong>,
-                local address <code>127.0.0.1</code>, local port <code>{server.port}</code>.
+                , add a tunnel: type <strong>Minecraft Java</strong>, agent{" "}
+                <strong>this app&apos;s agent</strong>, local address{" "}
+                <code>127.0.0.1</code>, local port <code>{server.port}</code>.
               </li>
-              <li>Copy the address playit shows for it (like abc.joinmc.link) and paste it here.</li>
+              <li>
+                Copy the address playit shows for it (like abc.joinmc.link) and
+                paste it here.
+              </li>
             </ol>
             <label>
               playit address
@@ -189,19 +257,36 @@ export default function PublicAddressTab({ server }) {
             </label>
           </>
         )}
-        {message && <p className={message.ok ? "mcsm-ok mcsm-small" : "mcsm-error mcsm-small"}>{message.text}</p>}
+        {message && (
+          <p
+            className={
+              message.ok ? "mcsm-ok mcsm-small" : "mcsm-error mcsm-small"
+            }
+          >
+            {message.text}
+          </p>
+        )}
         <div className="mcsm-actions">
           {route && (
             <button
               type="button"
               className="mcsm-danger"
               disabled={busy}
-              onClick={() => run(() => api.removePublicRoute(server.id), "Public address removed.")}
+              onClick={() =>
+                run(
+                  () => api.removePublicRoute(server.id),
+                  "Public address removed.",
+                )
+              }
             >
               Remove address
             </button>
           )}
-          <button type="submit" className="mcsm-primary" disabled={busy || (route && !changed)}>
+          <button
+            type="submit"
+            className="mcsm-primary"
+            disabled={busy || (route && !changed)}
+          >
             {busy ? "Working..." : route ? "Save" : "Create address"}
           </button>
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
-import CloudflareSettings from "../components/CloudflareSettings.jsx";
+import CloudflareSettings, { PlayitSettings } from "../components/CloudflareSettings.jsx";
 
 const SOURCE_LABELS = {
   settings: "saved here",
@@ -105,6 +105,7 @@ export default function Settings() {
         </form>
         {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
       </section>
+      <PlayitSettings />
       <CloudflareSettings />
       <BackupLocation />
       <KnownMods />

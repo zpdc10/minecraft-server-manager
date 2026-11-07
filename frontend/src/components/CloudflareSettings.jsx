@@ -42,7 +42,11 @@ export default function CloudflareSettings() {
       .cloudflare()
       .then((s) => {
         apply(s);
-        if (s.token_set) api.cloudflareZones().then(setZones).catch(() => {});
+        if (s.token_set)
+          api
+            .cloudflareZones()
+            .then(setZones)
+            .catch(() => {});
       })
       .catch((e) => setMessage({ error: true, text: e.message }));
   }, []);
@@ -87,7 +91,8 @@ export default function CloudflareSettings() {
     );
   };
 
-  const sync = () => run(async () => apply(await api.syncCloudflare()), "Checked and updated.");
+  const sync = () =>
+    run(async () => apply(await api.syncCloudflare()), "Checked and updated.");
 
   const disconnect = () => {
     if (
@@ -109,27 +114,41 @@ export default function CloudflareSettings() {
     <section className="panel">
       <h2>Cloudflare (public addresses)</h2>
       <p className="muted">
-        Link your Cloudflare account and the app gives each server its own address on your domain, like{" "}
-        <code>survival.{status?.zone_name || "example.com"}</code>, and removes it when the server is deleted. The app
-        makes its own tunnel named <code>minecraft-server-manager</code> and runs its own <code>mcsm_cloudflared</code>{" "}
-        container, so your existing tunnel and its settings are left alone.
+        Link your Cloudflare account and the app gives each server its own
+        address on your domain, like{" "}
+        <code>survival.{status?.zone_name || "example.com"}</code>, and removes
+        it when the server is deleted. The app makes its own tunnel named{" "}
+        <code>minecraft-server-manager</code> and runs its own{" "}
+        <code>mcsm_cloudflared</code> container, so your existing tunnel and its
+        settings are left alone.
       </p>
       <details>
         <summary>How to make the API token</summary>
         <ol className="muted">
           <li>
             Open{" "}
-            <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noreferrer">
+            <a
+              href="https://dash.cloudflare.com/profile/api-tokens"
+              target="_blank"
+              rel="noreferrer"
+            >
               dash.cloudflare.com/profile/api-tokens
             </a>{" "}
             and choose Create Token, then Create Custom Token.
           </li>
           <li>
-            Permissions: <strong>Account › Cloudflare Tunnel › Edit</strong>, <strong>Zone › DNS › Edit</strong> and{" "}
+            Permissions: <strong>Account › Cloudflare Tunnel › Edit</strong>,{" "}
+            <strong>Zone › DNS › Edit</strong> and{" "}
             <strong>Zone › Zone › Read</strong>.
           </li>
-          <li>Zone resources: Include › Specific zone › your domain. Account resources: your account.</li>
-          <li>Create it and paste it below. The token is stored only on your server and never shown again.</li>
+          <li>
+            Zone resources: Include › Specific zone › your domain. Account
+            resources: your account.
+          </li>
+          <li>
+            Create it and paste it below. The token is stored only on your
+            server and never shown again.
+          </li>
         </ol>
       </details>
 
@@ -137,16 +156,27 @@ export default function CloudflareSettings() {
         <p>
           Token:{" "}
           {status.token_set ? (
-            <strong>Saved {status.token_hint && <code>{status.token_hint}</code>}</strong>
+            <strong>
+              Saved {status.token_hint && <code>{status.token_hint}</code>}
+            </strong>
           ) : (
             <strong>Not linked yet</strong>
           )}
           {ready && (
             <>
               <br />
-              Tunnel: <strong>{TUNNEL_STATUS[status.tunnel_status] ?? status.tunnel_status}</strong>
-              {status.tunnel_connections > 0 && <span className="muted"> ({status.tunnel_connections} links)</span>}
-              {" · "}cloudflared container: <strong>{status.connector_status}</strong>
+              Tunnel:{" "}
+              <strong>
+                {TUNNEL_STATUS[status.tunnel_status] ?? status.tunnel_status}
+              </strong>
+              {status.tunnel_connections > 0 && (
+                <span className="muted">
+                  {" "}
+                  ({status.tunnel_connections} links)
+                </span>
+              )}
+              {" · "}cloudflared container:{" "}
+              <strong>{status.connector_status}</strong>
               {status.error && <span className="error"> {status.error}</span>}
             </>
           )}
@@ -157,11 +187,19 @@ export default function CloudflareSettings() {
         <input
           type="password"
           autoComplete="off"
-          placeholder={status?.token_set ? "Paste a new token to replace it" : "Paste your Cloudflare API token"}
+          placeholder={
+            status?.token_set
+              ? "Paste a new token to replace it"
+              : "Paste your Cloudflare API token"
+          }
           value={token}
           onChange={(e) => setToken(e.target.value)}
         />
-        <button className="primary" type="submit" disabled={busy || !token.trim()}>
+        <button
+          className="primary"
+          type="submit"
+          disabled={busy || !token.trim()}
+        >
           Save token
         </button>
       </form>
@@ -170,7 +208,11 @@ export default function CloudflareSettings() {
         <form className="cf-config" onSubmit={saveConfig}>
           <label>
             Domain
-            <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} required>
+            <select
+              value={zoneId}
+              onChange={(e) => setZoneId(e.target.value)}
+              required
+            >
               <option value="">Choose a domain</option>
               {zones.map((z) => (
                 <option key={z.id} value={z.id}>
@@ -182,24 +224,43 @@ export default function CloudflareSettings() {
           <label>
             How players connect (default for new servers)
             <select value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="tunnel">Tunnel (no port forwarding, players run cloudflared)</option>
-              <option value="direct">Direct (port forwarding, players need nothing)</option>
-              <option value="playit">playit.gg (free, players need nothing, up to 4 servers)</option>
+              <option value="tunnel">
+                Tunnel (no port forwarding, players run cloudflared)
+              </option>
+              <option value="direct">
+                Direct (port forwarding, players need nothing)
+              </option>
+              <option value="playit">
+                playit.gg (free, players need nothing, up to 4 servers)
+              </option>
             </select>
           </label>
           <p className="muted small">{MODE_HELP[mode]}</p>
           {mode === "direct" && (
             <label>
-              Public IP or hostname for direct addresses (leave empty to detect and keep it updated)
-              <input placeholder="Detect automatically" value={target} onChange={(e) => setTarget(e.target.value)} />
+              Public IP or hostname for direct addresses (leave empty to detect
+              and keep it updated)
+              <input
+                placeholder="Detect automatically"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+              />
             </label>
           )}
           <label className="check">
-            <input type="checkbox" checked={autoRoute} onChange={(e) => setAutoRoute(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={autoRoute}
+              onChange={(e) => setAutoRoute(e.target.checked)}
+            />
             Give every new server a public address automatically
           </label>
           <div className="key-form">
-            <button className="primary" type="submit" disabled={busy || !zoneId}>
+            <button
+              className="primary"
+              type="submit"
+              disabled={busy || !zoneId}
+            >
               {busy ? "Working..." : ready ? "Save" : "Set up tunnel"}
             </button>
             {ready && (
@@ -213,8 +274,27 @@ export default function CloudflareSettings() {
           </div>
         </form>
       )}
-      {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
-      {status?.token_set && <PlayitAgent status={status} onStatus={setStatus} />}
+      {message && (
+        <p className={message.error ? "error" : "ok"}>{message.text}</p>
+      )}
+    </section>
+  );
+}
+
+export function PlayitSettings() {
+  const [status, setStatus] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    api
+      .cloudflare()
+      .then(setStatus)
+      .catch((e) => setError(e.message));
+  }, []);
+  return (
+    <section className="panel">
+      <h2>playit.gg (players join with nothing installed)</h2>
+      {error && <p className="error">{error}</p>}
+      {status && <PlayitAgent status={status} onStatus={setStatus} />}
     </section>
   );
 }
@@ -230,7 +310,10 @@ function PlayitAgent({ status, onStatus }) {
     try {
       onStatus(await api.savePlayitKey(value));
       setKey("");
-      setMessage({ error: false, text: value ? "playit agent is running." : "playit agent removed." });
+      setMessage({
+        error: false,
+        text: value ? "playit agent is running." : "playit agent removed.",
+      });
     } catch (e) {
       setMessage({ error: true, text: e.message });
     } finally {
@@ -240,18 +323,35 @@ function PlayitAgent({ status, onStatus }) {
 
   return (
     <>
-      <h3>playit.gg agent</h3>
       <p className="muted">
-        Lets players join with nothing installed, free for up to 4 servers. Make a free account at{" "}
-        <a href="https://playit.gg" target="_blank" rel="noreferrer">
-          playit.gg
-        </a>
-        , go to Agents, add a Docker agent and paste its secret key here. The app runs it as the{" "}
-        <code>mcsm_playit</code> container.
+        Lets players outside your network join by typing an address into
+        Minecraft. They install nothing, you open no ports on your router, and
+        your home IP stays hidden. Free for up to 4 servers.
       </p>
+      <ol className="muted">
+        <li>
+          Make a free account at{" "}
+          <a href="https://playit.gg" target="_blank" rel="noreferrer">
+            playit.gg
+          </a>
+          , go to Agents, add a <strong>Docker</strong> agent and paste its
+          secret key below. The app runs it for you as the{" "}
+          <code>mcsm_playit</code> container.
+        </li>
+        <li>
+          For each server, open Manage › <strong>Public address</strong> and
+          follow the steps there.
+        </li>
+        <li>
+          Optional: link Cloudflare below so players use your own domain, like
+          survival.yourdomain.com.
+        </li>
+      </ol>
       <p>
         Agent:{" "}
-        <strong>{status.playit_key_set ? status.playit_status : "not set up"}</strong>
+        <strong>
+          {status.playit_key_set ? status.playit_status : "not set up"}
+        </strong>
       </p>
       <form
         className="key-form"
@@ -263,11 +363,19 @@ function PlayitAgent({ status, onStatus }) {
         <input
           type="password"
           autoComplete="off"
-          placeholder={status.playit_key_set ? "Paste a new secret key to replace it" : "playit secret key"}
+          placeholder={
+            status.playit_key_set
+              ? "Paste a new secret key to replace it"
+              : "playit secret key"
+          }
           value={key}
           onChange={(e) => setKey(e.target.value)}
         />
-        <button className="primary" type="submit" disabled={busy || !key.trim()}>
+        <button
+          className="primary"
+          type="submit"
+          disabled={busy || !key.trim()}
+        >
           Save key
         </button>
         {status.playit_key_set && (
@@ -276,7 +384,9 @@ function PlayitAgent({ status, onStatus }) {
           </button>
         )}
       </form>
-      {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
+      {message && (
+        <p className={message.error ? "error" : "ok"}>{message.text}</p>
+      )}
     </>
   );
 }
