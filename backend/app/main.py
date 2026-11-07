@@ -2,17 +2,25 @@
 
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import APP_VERSION, settings
+from .providers import ProviderError
 from .routers import search
+from .routers import settings as settings_router
 
 app = FastAPI(title="Minecraft Server Manager", version=APP_VERSION)
 
 app.include_router(search.router)
+app.include_router(settings_router.router)
 # Step 2 adds: app.include_router(servers.router)
+
+
+@app.exception_handler(ProviderError)
+async def provider_error(_: Request, exc: ProviderError):
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 
 @app.get("/api/health")
