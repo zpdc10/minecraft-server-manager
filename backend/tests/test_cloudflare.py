@@ -327,3 +327,36 @@ def test_auto_route_skips_playit_default(env):
     client.post("/api/servers", json=modrinth_req(name="Quiet"))
     assert client.get("/api/cloudflare/routes").json() == []
     assert fake.records == {}
+
+
+def test_playit_works_without_cloudflare(env):
+    fake, client, docker = env
+    r = client.put("/api/cloudflare/playit", json={"secret_key": "secret-abc"})
+    assert r.status_code == 200 and r.json()["playit_status"] == "running"
+    assert r.json()["token_set"] is False
+    client.post("/api/servers", json=modrinth_req(name="Survival"))
+    r = client.put("/api/cloudflare/routes/survival", json={"playit_address": "abc-def.joinmc.link"})
+    assert r.status_code == 200, r.text
+    assert r.json()["mode"] == "playit" and r.json()["connect_address"] == "abc-def.joinmc.link"
+    assert fake.records == {}
+    # Other modes still need Cloudflare.
+    assert client.put("/api/cloudflare/routes/survival", json={"mode": "direct"}).status_code == 400
+    assert client.delete("/api/servers/survival").status_code == 204
+    assert client.get("/api/cloudflare/routes").json() == []
+
+
+@respx.mock
+def test_disconnect_keeps_playit(env):
+    fake, client, docker = env
+    respx.get(DOH).mock(side_effect=doh_srv("sea-route.ply.gg", 41234))
+    connect(client, auto=False)
+    client.put("/api/cloudflare/playit", json={"secret_key": "secret-abc"})
+    client.post("/api/servers", json=modrinth_req(name="Survival"))
+    client.put("/api/cloudflare/routes/survival", json={"mode": "playit", "playit_address": "abc.joinmc.link"})
+    assert client.delete("/api/cloudflare").status_code == 204
+    assert fake.records == {}
+    status = client.get("/api/cloudflare").json()
+    assert status["token_set"] is False and status["playit_key_set"] is True
+    (route,) = client.get("/api/cloudflare/routes").json()
+    assert route["connect_address"] == "abc.joinmc.link"
+    assert "mcsm_playit" in {c.name for c in docker.containers.list(all=True)}

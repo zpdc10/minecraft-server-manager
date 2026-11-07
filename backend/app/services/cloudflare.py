@@ -407,9 +407,12 @@ class Cloudflare:
     def add_route(
         self, server_id: str, port: int, subdomain: str = "", mode: str = "", playit_address: str = ""
     ) -> dict:
-        if not self.is_ready():
-            raise CloudflareError("Connect Cloudflare on the Settings page first.")
         cfg = self.config()
+        if not self.is_ready():
+            # Without Cloudflare, playit still works: players use playit's own address.
+            if (mode or "playit") != "playit":
+                raise CloudflareError("Connect Cloudflare on the Settings page first.")
+            return self._add_playit_only(server_id, port, playit_address)
         mode = mode or cfg.get("default_mode") or "tunnel"
         if mode not in MODES:
             raise CloudflareError(f"Mode must be one of {', '.join(MODES)}")
@@ -468,6 +471,33 @@ class Cloudflare:
             self._save_routes(routes)
             if mode == "tunnel" or (old and old.get("mode") == "tunnel"):
                 self.sync_ingress()
+        return route
+
+    def _add_playit_only(self, server_id: str, port: int, playit_address: str) -> dict:
+        """A playit route with no DNS of our own: players join playit's address directly."""
+        old_addr = (self.routes().get(server_id) or {}).get("playit_address", "")
+        playit_address = (playit_address or old_addr).strip()
+        if not playit_address:
+            raise CloudflareError("Paste the server's playit.gg address (from the playit dashboard).")
+        try:
+            host, addr_port = playit.parse_address(playit_address)
+        except playit.PlayitError as e:
+            raise CloudflareError(str(e)) from e
+        with self._lock:
+            routes = self.routes()
+            old = routes.get(server_id)
+            if old and old.get("record_ids"):
+                self._remove_records(old)
+            hostname = f"{host}:{addr_port}" if addr_port else host
+            route = {
+                "hostname": hostname,
+                "mode": "playit",
+                "port": port,
+                "record_ids": [],
+                "playit_address": playit_address,
+            }
+            routes[server_id] = route
+            self._save_routes(routes)
         return route
 
     def _remove_records(self, route: dict) -> None:
@@ -559,6 +589,16 @@ class Cloudflare:
                     self._remove_records(route)
                     routes = self.routes()
                     routes.pop(sid, None)
+                    if route.get("mode") == "playit" and route.get("playit_address"):
+                        # The playit tunnel still works; players go back to playit's own address.
+                        host, port = playit.parse_address(route["playit_address"])
+                        routes[sid] = {
+                            "hostname": f"{host}:{port}" if port else host,
+                            "mode": "playit",
+                            "port": route.get("port", 0),
+                            "record_ids": [],
+                            "playit_address": route["playit_address"],
+                        }
                     self._save_routes(routes)
             self.remove_connector(manager)
             if self.token() and cfg.get("account_id") and cfg.get("tunnel_id"):
@@ -572,7 +612,9 @@ class Cloudflare:
                 except CloudflareError as e:
                     if getattr(e, "cf_status", 0) != 404:
                         raise
-            settings_store.save({"cloudflare": None})
+            # The playit agent doesn't depend on Cloudflare, so keep its key.
+            secret = cfg.get("playit_secret")
+            settings_store.save({"cloudflare": {"playit_secret": secret} if secret else None})
 
 
 _instance: Cloudflare | None = None
