@@ -94,6 +94,7 @@ export const api = {
   saveCloudflareToken: (apiToken) => send("/api/cloudflare/token", "PUT", { api_token: apiToken }),
   cloudflareZones: () => get("/api/cloudflare/zones"),
   saveCloudflareConfig: (body) => send("/api/cloudflare/config", "PUT", body),
+  savePlayitKey: (secretKey) => send("/api/cloudflare/playit", "PUT", { secret_key: secretKey }),
   syncCloudflare: () => send("/api/cloudflare/sync", "POST"),
   disconnectCloudflare: async () => {
     const resp = await fetch("/api/cloudflare", { method: "DELETE" });

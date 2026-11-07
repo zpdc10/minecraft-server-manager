@@ -9,6 +9,10 @@ has. Each server can get a hostname such as ``survival.example.com`` in one of t
   hidden, but Cloudflare only carries raw TCP (Minecraft Java) to clients that run
   ``cloudflared access tcp`` on their own computer. Without Spectrum (a paid add-on),
   a player can't type the hostname straight into Minecraft.
+* ``playit``: the server has a playit.gg tunnel (free, made in the playit dashboard,
+  carried by the app's playit agent container). The app adds a DNS-only record and a
+  ``_minecraft._tcp`` SRV record pointing at the tunnel's real host and port, so
+  players type the hostname into Minecraft with nothing installed and no port forward.
 * ``direct``: a DNS-only record pointing at the home's public IP plus a
   ``_minecraft._tcp`` SRV record with the server's port. Players type the hostname
   into Minecraft with nothing to install, but the port must be forwarded on the router
@@ -33,6 +37,7 @@ import httpx
 
 from .. import settings_store
 from ..config import USER_AGENT, settings
+from . import playit
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +49,7 @@ CONNECTOR_NAME = "mcsm_cloudflared"
 CONNECTOR_IMAGE = os.environ.get("CLOUDFLARED_IMAGE", "cloudflare/cloudflared:latest")
 COMPONENT_LABEL = "mcsm.component"
 RECORD_COMMENT = "Managed by Minecraft Server Manager"
-MODES = ("tunnel", "direct")
+MODES = ("tunnel", "direct", "playit")
 _LABEL_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
 
 
@@ -199,6 +204,19 @@ class Cloudflare:
             self.ensure_connector(manager)
         return self.config()
 
+    # ---- playit agent ------------------------------------------------------
+
+    def save_playit_key(self, secret_key: str, manager) -> None:
+        """Run the playit agent with this key, or remove it when the key is empty."""
+        secret_key = secret_key.strip()
+        with self._lock:
+            if not secret_key:
+                playit.remove_agent(manager)
+                self._save_config(playit_secret=None)
+                return
+            playit.ensure_agent(manager, secret_key)
+            self._save_config(playit_secret=secret_key)
+
     # ---- tunnel and connector ---------------------------------------------
 
     def ensure_tunnel(self) -> str:
@@ -344,8 +362,26 @@ class Cloudflare:
             return "CNAME", target
         return ("AAAA" if ip.version == 6 else "A"), str(ip)
 
-    def _make_records(self, hostname: str, mode: str, port: int) -> list[dict]:
+    def _make_records(self, hostname: str, mode: str, port: int, target: tuple[str, int] | None = None) -> list[dict]:
         cfg = self.config()
+        if mode == "playit":
+            host, tport = target or ("", 0)
+            try:
+                ip = ipaddress.ip_address(host)
+                main = {"type": "AAAA" if ip.version == 6 else "A", "content": str(ip)}
+                srv_target = hostname
+            except ValueError:
+                main = {"type": "CNAME", "content": host}
+                srv_target = host
+            return [
+                {**main, "name": hostname, "proxied": False, "ttl": 300},
+                {
+                    "type": "SRV",
+                    "name": f"_minecraft._tcp.{hostname}",
+                    "data": {"priority": 0, "weight": 5, "port": tport, "target": srv_target},
+                    "ttl": 300,
+                },
+            ]
         if mode == "tunnel":
             return [
                 {
@@ -368,7 +404,9 @@ class Cloudflare:
 
     # ---- routes -----------------------------------------------------------
 
-    def add_route(self, server_id: str, port: int, subdomain: str = "", mode: str = "") -> dict:
+    def add_route(
+        self, server_id: str, port: int, subdomain: str = "", mode: str = "", playit_address: str = ""
+    ) -> dict:
         if not self.is_ready():
             raise CloudflareError("Connect Cloudflare on the Settings page first.")
         cfg = self.config()
@@ -383,6 +421,18 @@ class Cloudflare:
             )
         _, zone_name = self._zone()
         hostname = f"{label}.{zone_name}"
+        target = None
+        if mode == "playit":
+            old_addr = (self.routes().get(server_id) or {}).get("playit_address", "")
+            playit_address = (playit_address or old_addr).strip()
+            if not playit_address:
+                raise CloudflareError("Paste the server's playit.gg address (from the playit dashboard).")
+            try:
+                target = playit.resolve(playit_address)
+            except playit.PlayitError as e:
+                raise CloudflareError(str(e)) from e
+            if target[0] == hostname:
+                raise CloudflareError("Use the address playit gave the tunnel, not your own domain.")
         with self._lock:
             routes = self.routes()
             old = routes.get(server_id)
@@ -402,7 +452,7 @@ class Cloudflare:
                 self._remove_records(old)
             created: list[str] = []
             try:
-                for rec in self._make_records(hostname, mode, port):
+                for rec in self._make_records(hostname, mode, port, target):
                     created.append(self._create_record(rec))
             except CloudflareError:
                 for rid in created:
@@ -412,6 +462,8 @@ class Cloudflare:
                     self._save_routes(routes)
                 raise
             route = {"hostname": hostname, "mode": mode, "port": port, "record_ids": created}
+            if target:
+                route.update(playit_address=playit_address, target=list(target))
             routes[server_id] = route
             self._save_routes(routes)
             if mode == "tunnel" or (old and old.get("mode") == "tunnel"):
@@ -451,9 +503,27 @@ class Cloudflare:
                         self._rebuild_direct(r)
             if any(r["mode"] == "direct" for r in routes.values()):
                 self._refresh_direct_target(routes)
+            for r in routes.values():
+                if r["mode"] == "playit" and r.get("playit_address"):
+                    changed |= self._refresh_playit(r)
             if changed:
                 self._save_routes(routes)
             self.sync_ingress(ports)
+
+    def _refresh_playit(self, route: dict) -> bool:
+        """Re-point a playit route's records if playit moved the tunnel to a new host or port."""
+        try:
+            target = list(playit.resolve(route["playit_address"]))
+        except playit.PlayitError as e:
+            log.warning("Could not look up %s: %s", route["playit_address"], e)
+            return False
+        if target == route.get("target"):
+            return False
+        self._remove_records(route)
+        records = self._make_records(route["hostname"], "playit", route["port"], tuple(target))
+        route["record_ids"] = [self._create_record(r) for r in records]
+        route["target"] = target
+        return True
 
     def _rebuild_direct(self, route: dict) -> None:
         self._remove_records(route)

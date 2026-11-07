@@ -99,6 +99,14 @@ gives each new server an address such as `survival.example.com` (turn this off t
   clients running cloudflared, so each player installs it once and runs
   `cloudflared access tcp --hostname survival.example.com --url 127.0.0.1:25565`, then joins `127.0.0.1:25565`.
   The only way around that on Cloudflare is Spectrum, a paid add-on.
+- **playit.gg mode (players install nothing, free).** A free Cloudflare tunnel can't take Minecraft connections
+  from the game itself, so for a free, nothing-to-install setup the app uses [playit.gg](https://playit.gg)
+  (free for 4 tunnels). Paste a playit Docker agent's secret key in Settings and the app runs it as the `mcsm_playit`
+  container (host networking). For each server, add a "Minecraft Java" tunnel in the playit dashboard pointing at
+  `127.0.0.1:<server port>` and paste the address it gives (`abc.joinmc.link`) on the server's Public address tab.
+  The app looks up where that address really leads (playit's names are SRV records, and Minecraft follows only one)
+  and makes a DNS-only record plus a `_minecraft._tcp` SRV record, so players join `survival.example.com`. The
+  10-minute sync re-points the records if playit moves the tunnel.
 - **Direct mode.** A DNS-only A record to your public IP (detected and re-checked every 10 minutes, or a fixed IP or
   hostname you enter) plus a `_minecraft._tcp` SRV record with the server's port. Players type the address into
   Minecraft with nothing to install, but you must forward the port on your router and the address reveals your IP.
@@ -126,6 +134,7 @@ gives each new server an address such as `survival.example.com` (turn this off t
 | `BACKUP_SCHEDULER` | `true` | Set to `false` to turn scheduled backups off for this install |
 | `CLOUDFLARE_API_TOKEN` | (empty) | Cloudflare API token. A token saved on the Settings page overrides this |
 | `CLOUDFLARE_SYNC` | `true` | Set to `false` to stop the 10-minute check of tunnel ports and the public IP |
+| `PLAYIT_IMAGE` | `playitcloud/playit:0.15.19` | Image for the playit.gg agent |
 | `CLOUDFLARED_IMAGE` | `cloudflare/cloudflared:latest` | Image for the app's tunnel connector |
 | `MODRINTH_API_URL` | `https://api.modrinth.com/v2` | Override the Modrinth API base URL |
 
@@ -229,10 +238,11 @@ Dockerfile           multi-stage build: UI, then Python runtime
 | `GET /api/custom-packs/{id}/export/mrpack` · `/curseforge` | Download the pack; warnings in the `X-Pack-Warnings` header |
 | `GET /api/cloudflare` · `DELETE` | Cloudflare link status / disconnect and remove everything the app made |
 | `PUT /api/cloudflare/token` | Save a token `{api_token}`; returns the domains it can see |
-| `PUT /api/cloudflare/config` | `{zone_id, auto_route, default_mode: tunnel\|direct, direct_target}`; sets up the tunnel and connector |
+| `PUT /api/cloudflare/playit` | Run the playit.gg agent with `{secret_key}` (empty removes it) |
+| `PUT /api/cloudflare/config` | `{zone_id, auto_route, default_mode: tunnel\|direct\|playit, direct_target}`; sets up the tunnel and connector |
 | `POST /api/cloudflare/sync` | Repair the connector and bring ports and IPs up to date |
 | `GET /api/cloudflare/routes` | Public addresses with player instructions |
-| `PUT /api/cloudflare/routes/{server_id}` · `DELETE` | Create or change `{subdomain, mode}` / remove a server's address |
+| `PUT /api/cloudflare/routes/{server_id}` · `DELETE` | Create or change `{subdomain, mode, playit_address}` / remove a server's address |
 | `GET /api/health` | Health check |
 
 ## Development

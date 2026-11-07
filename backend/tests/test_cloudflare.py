@@ -7,12 +7,14 @@ import re
 
 import httpx
 import pytest
+import respx
 from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import app
 from app.routers.servers import get_manager
 from app.services import cloudflare as cf_mod
+from app.services import playit
 from app.services.docker_manager import DockerManager
 
 from .test_servers import FakeDocker, modrinth_req
@@ -234,3 +236,94 @@ def test_disconnect_removes_everything_it_made(env):
     assert fake.tunnels == {}
     assert "mcsm_cloudflared" not in {c.name for c in docker.containers.list(all=True)}
     assert client.get("/api/cloudflare").json()["token_set"] is False
+
+
+# ---- playit.gg -----------------------------------------------------------------
+
+DOH = "https://cloudflare-dns.com/dns-query"
+
+
+def doh_srv(target: str, port: int):
+    def handler(request):
+        if request.url.params.get("type") == "SRV":
+            return httpx.Response(200, json={"Answer": [{"type": 33, "data": f"0 0 {port} {target}."}]})
+        return httpx.Response(200, json={})
+
+    return handler
+
+
+def test_parse_playit_address():
+    assert playit.parse_address("abc.joinmc.link") == ("abc.joinmc.link", None)
+    assert playit.parse_address("Host.Ply.gg:12345") == ("host.ply.gg", 12345)
+    assert playit.parse_address("147.185.221.3:40000") == ("147.185.221.3", 40000)
+    with pytest.raises(playit.PlayitError):
+        playit.parse_address("not an address")
+    with pytest.raises(playit.PlayitError):
+        playit.parse_address("x.joinmc.link:99999")
+
+
+def test_playit_key_runs_agent(env):
+    _, client, docker = env
+    connect(client)
+    r = client.put("/api/cloudflare/playit", json={"secret_key": "secret-abc"})
+    assert r.status_code == 200, r.text
+    assert r.json()["playit_key_set"] is True and r.json()["playit_status"] == "running"
+    c = docker.containers.get("mcsm_playit")
+    assert c.kwargs["environment"] == {"SECRET_KEY": "secret-abc"} and c.kwargs["network_mode"] == "host"
+    client.put("/api/cloudflare/playit", json={"secret_key": ""})
+    assert "mcsm_playit" not in {c.name for c in docker.containers.list(all=True)}
+
+
+@respx.mock
+def test_playit_route_follows_joinmc_srv(env):
+    fake, client, _ = env
+    respx.get(DOH).mock(side_effect=doh_srv("sea-route.ply.gg", 41234))
+    connect(client, auto=False)
+    client.post("/api/servers", json=modrinth_req(name="Survival"))
+    r = client.put("/api/cloudflare/routes/survival", json={"mode": "playit", "playit_address": "abc-def.joinmc.link"})
+    assert r.status_code == 200, r.text
+    assert r.json()["connect_address"] == "survival.example.com"
+    assert r.json()["target"] == "sea-route.ply.gg:41234"
+    cname = next(x for x in fake.records.values() if x["type"] == "CNAME")
+    srv = next(x for x in fake.records.values() if x["type"] == "SRV")
+    assert cname["content"] == "sea-route.ply.gg" and cname["proxied"] is False
+    assert srv["name"] == "_minecraft._tcp.survival.example.com"
+    assert srv["data"] == {"priority": 0, "weight": 5, "port": 41234, "target": "sea-route.ply.gg"}
+
+    # playit moves the tunnel: the next sync re-points the records.
+    respx.get(DOH).mock(side_effect=doh_srv("new-route.ply.gg", 40001))
+    client.post("/api/cloudflare/sync")
+    srv = next(x for x in fake.records.values() if x["type"] == "SRV")
+    assert srv["data"]["target"] == "new-route.ply.gg" and srv["data"]["port"] == 40001
+    assert len(fake.records) == 2
+
+
+def test_playit_route_with_ip_and_port(env):
+    fake, client, _ = env
+    connect(client, auto=False)
+    client.post("/api/servers", json=modrinth_req(name="Creative"))
+    r = client.put(
+        "/api/cloudflare/routes/creative",
+        json={"subdomain": "build", "mode": "playit", "playit_address": "147.185.221.3:40000"},
+    )
+    assert r.status_code == 200, r.text
+    a = next(x for x in fake.records.values() if x["type"] == "A")
+    srv = next(x for x in fake.records.values() if x["type"] == "SRV")
+    assert a["name"] == "build.example.com" and a["content"] == "147.185.221.3"
+    assert srv["data"]["target"] == "build.example.com" and srv["data"]["port"] == 40000
+
+
+def test_playit_route_needs_address(env):
+    _, client, _ = env
+    connect(client, auto=False)
+    client.post("/api/servers", json=modrinth_req(name="Lobby"))
+    r = client.put("/api/cloudflare/routes/lobby", json={"mode": "playit"})
+    assert r.status_code == 400 and "playit" in r.json()["detail"]
+
+
+def test_auto_route_skips_playit_default(env):
+    fake, client, _ = env
+    connect(client, mode="playit")
+    client.post("/api/servers", json=modrinth_req(name="Quiet"))
+    assert client.get("/api/cloudflare/routes").json() == []
+    assert fake.records == {}

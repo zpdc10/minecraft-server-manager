@@ -24,6 +24,7 @@ export default function PublicAddressTab({ server }) {
   const [route, setRoute] = useState(undefined);
   const [subdomain, setSubdomain] = useState("");
   const [mode, setMode] = useState("tunnel");
+  const [playitAddress, setPlayitAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -34,6 +35,7 @@ export default function PublicAddressTab({ server }) {
     setRoute(r);
     setSubdomain(r ? r.hostname.split(".")[0] : server.id.replace(/^ext-/, ""));
     setMode(r ? r.mode : status.default_mode || "tunnel");
+    setPlayitAddress(r?.playit_address || "");
   }
 
   useEffect(() => {
@@ -65,7 +67,11 @@ export default function PublicAddressTab({ server }) {
     );
   }
 
-  const changed = route && (route.mode !== mode || route.hostname.split(".")[0] !== subdomain.trim().toLowerCase());
+  const changed =
+    route &&
+    (route.mode !== mode ||
+      route.hostname.split(".")[0] !== subdomain.trim().toLowerCase() ||
+      (mode === "playit" && playitAddress.trim() !== route.playit_address));
 
   return (
     <div className="mcsm-settings">
@@ -94,6 +100,19 @@ export default function PublicAddressTab({ server }) {
                 players as they are.
               </p>
             </>
+          ) : route.mode === "playit" ? (
+            <>
+              <div className="mcsm-row">
+                <code className="mcsm-command">{route.hostname}</code>
+                <Copy text={route.hostname} />
+              </div>
+              <p className="mcsm-small">
+                Players type this into Minecraft as is, with nothing to install. It leads to your playit tunnel{" "}
+                <code>{route.playit_address}</code>
+                {route.target && <span className="mcsm-muted"> ({route.target})</span>}. If you change this
+                server&apos;s port, update the tunnel&apos;s local port in the playit dashboard too.
+              </p>
+            </>
           ) : (
             <>
               <div className="mcsm-row">
@@ -119,7 +138,8 @@ export default function PublicAddressTab({ server }) {
         onSubmit={(e) => {
           e.preventDefault();
           run(
-            () => api.setPublicRoute(server.id, { subdomain: subdomain.trim(), mode }),
+            () =>
+              api.setPublicRoute(server.id, { subdomain: subdomain.trim(), mode, playit_address: playitAddress.trim() }),
             route ? "Address updated." : "Address created. DNS can take a minute to work everywhere.",
           );
         }}
@@ -137,10 +157,38 @@ export default function PublicAddressTab({ server }) {
             <select value={mode} onChange={(e) => setMode(e.target.value)}>
               <option value="tunnel">Tunnel</option>
               <option value="direct">Direct</option>
+              <option value="playit">playit.gg</option>
             </select>
           </label>
         </div>
         <p className="mcsm-muted mcsm-small">{MODE_HELP[mode]}</p>
+        {mode === "playit" && (
+          <>
+            {!cf.playit_key_set && (
+              <p className="mcsm-error mcsm-small">Add your playit agent key on the Settings page first.</p>
+            )}
+            <ol className="mcsm-small">
+              <li>
+                In the{" "}
+                <a href="https://playit.gg/account/tunnels" target="_blank" rel="noreferrer">
+                  playit dashboard
+                </a>
+                , add a tunnel: type <strong>Minecraft Java</strong>, agent <strong>this app&apos;s agent</strong>,
+                local address <code>127.0.0.1</code>, local port <code>{server.port}</code>.
+              </li>
+              <li>Copy the address playit shows for it (like abc.joinmc.link) and paste it here.</li>
+            </ol>
+            <label>
+              playit address
+              <input
+                placeholder="abc-def.joinmc.link"
+                value={playitAddress}
+                onChange={(e) => setPlayitAddress(e.target.value)}
+                required
+              />
+            </label>
+          </>
+        )}
         {message && <p className={message.ok ? "mcsm-ok mcsm-small" : "mcsm-error mcsm-small"}>{message.text}</p>}
         <div className="mcsm-actions">
           {route && (
