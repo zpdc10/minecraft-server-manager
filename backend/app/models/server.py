@@ -16,6 +16,7 @@ ServerStatus = Literal[
     "stopping",
     "stopped",
     "error",
+    "missing",  # created by the app, but its container was deleted or lost
     "unknown",
 ]
 
@@ -100,3 +101,10 @@ class ServerInfo(BaseModel):
     created_at: str = ""
     error: str = ""
     build: BuildInfo | None = None
+    # False for Minecraft containers found on the host that this app didn't create.
+    # The app can start/stop them and use their files, but never recreates or deletes them.
+    managed: bool = True
+    image: str = ""
+    # Whether the app can see the server's files (backups, mods, server.properties).
+    files_available: bool = True
+    note: str = ""

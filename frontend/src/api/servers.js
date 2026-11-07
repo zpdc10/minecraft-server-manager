@@ -27,6 +27,7 @@ export const getServer = (id) => request(`/${encodeURIComponent(id)}`);
 export const createServer = (body) => request("", { method: "POST", body: JSON.stringify(body) });
 export const startServer = (id) => request(`/${encodeURIComponent(id)}/start`, { method: "POST" });
 export const stopServer = (id) => request(`/${encodeURIComponent(id)}/stop`, { method: "POST" });
+export const recreateServer = (id) => request(`/${encodeURIComponent(id)}/recreate`, { method: "POST" });
 export const restartServer = (id) => request(`/${encodeURIComponent(id)}/restart`, { method: "POST" });
 export const deleteServer = (id, deleteData = false) =>
   request(`/${encodeURIComponent(id)}?delete_data=${deleteData}`, { method: "DELETE" });

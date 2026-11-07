@@ -356,6 +356,8 @@ class BackupManager:
         info = self.mgr.get_server(server_id)  # raises ServerNotFound
         if self.mgr.is_building(server_id) or info.status in ("pulling", "creating", "installing", "testing"):
             raise ServerConflict("The server is still being set up. Back it up once it has finished.")
+        if not info.files_available or not self.mgr.local_data_path(server_id):
+            raise ServerConflict(info.note or "The app can't see this server's files.")
         if not os.path.isdir(self.mgr.local_data_path(server_id)):
             raise ServerConflict("The server has no files yet.")
         return info
@@ -658,7 +660,7 @@ class BackupManager:
             shutil.rmtree(old, ignore_errors=True)
             shutil.rmtree(tmp, ignore_errors=True)
             for name in top:
-                self._chown_tree(os.path.join(data, name))
+                self._chown_tree(os.path.join(data, name), *self.mgr.file_owner(server_id))
         finally:
             if was_running and c is not None:
                 self._set_message(server_id, "Starting the server...")
@@ -674,8 +676,9 @@ class BackupManager:
             msg += " The server is starting again."
         return msg
 
-    def _chown_tree(self, path: str) -> None:
-        uid, gid = self.settings.mc_uid, self.settings.mc_gid
+    def _chown_tree(self, path: str, uid: int | None = None, gid: int | None = None) -> None:
+        if uid is None or gid is None:
+            uid, gid = self.settings.mc_uid, self.settings.mc_gid
         try:
             os.lchown(path, uid, gid)
             for root, dirs, files in os.walk(path):

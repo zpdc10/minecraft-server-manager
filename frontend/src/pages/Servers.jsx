@@ -3,6 +3,7 @@ import {
   deleteServer,
   getLogs,
   listServers,
+  recreateServer,
   restartServer,
   startServer,
   stopServer,
@@ -22,6 +23,7 @@ const STATUS_LABELS = {
   stopping: "Stopping",
   stopped: "Stopped",
   error: "Error",
+  missing: "Container missing",
   unknown: "Unknown",
 };
 
@@ -129,8 +131,14 @@ function DeleteDialog({ server, onClose, onDeleted }) {
   return (
     <div className="mcsm-backdrop" onClick={onClose}>
       <div className="mcsm-dialog" onClick={(e) => e.stopPropagation()}>
-        <h2>Delete {server.name}?</h2>
-        <p>This stops and removes the server container.</p>
+        <h2>
+          {server.status === "missing" ? "Remove" : "Delete"} {server.name}?
+        </h2>
+        <p>
+          {server.status === "missing"
+            ? "This removes the server from the list. Its files stay where they are unless you tick the box."
+            : "This stops and removes the server container."}
+        </p>
         <label className="mcsm-check">
           <input type="checkbox" checked={deleteData} onChange={(e) => setDeleteData(e.target.checked)} />
           Also delete the world and all server files in <code>{server.data_path}</code>
@@ -206,25 +214,42 @@ export default function Servers() {
           const busy = busyId === s.id;
           const isUp = ["running", "starting"].includes(s.status);
           const settingUp = ["pulling", "creating", "installing", "testing"].includes(s.status);
+          const missing = s.status === "missing";
+          const details = [
+            s.pack_title || (s.source === "vanilla" ? "Vanilla" : s.project_slug || s.project_id || s.image),
+            s.minecraft_version && `MC ${s.minecraft_version}`,
+            s.memory_gb > 0 && `${s.memory_gb} GB RAM`,
+            s.java_version,
+          ].filter(Boolean);
           return (
             <div key={s.id} className="mcsm-card">
               <div className="mcsm-card-main">
                 <div className="mcsm-card-title">
                   <strong>{s.name}</strong>
                   <StatusBadge status={s.status} />
+                  {!s.managed && (
+                    <span className="mcsm-badge" title={`Container ${s.container_name} (${s.image})`}>
+                      Found on host
+                    </span>
+                  )}
                 </div>
-                <div className="mcsm-muted mcsm-small">
-                  {s.pack_title || (s.source === "vanilla" ? "Vanilla" : s.project_slug || s.project_id)}
-                  {s.minecraft_version && ` · MC ${s.minecraft_version}`} · {s.memory_gb} GB RAM · {s.java_version}
-                </div>
-                <div className="mcsm-small">
-                  Address: <code>{host}:{s.port}</code>
-                </div>
+                <div className="mcsm-muted mcsm-small">{details.join(" · ")}</div>
+                {s.port > 0 && (
+                  <div className="mcsm-small">
+                    Address: <code>{host}:{s.port}</code>
+                  </div>
+                )}
                 {s.error && !s.build && <div className="mcsm-error mcsm-small">{s.error}</div>}
+                {s.note && <div className="mcsm-muted mcsm-small">{s.note}</div>}
                 <BuildSummary build={s.build} />
               </div>
               <div className="mcsm-card-actions">
-                {!isUp && !settingUp && (
+                {missing && (
+                  <button className="mcsm-primary" disabled={busy} onClick={() => act(s, recreateServer)}>
+                    {busy ? "Working..." : "Recreate container"}
+                  </button>
+                )}
+                {!isUp && !settingUp && !missing && (
                   <button disabled={busy} onClick={() => act(s, startServer)}>
                     Start
                   </button>
@@ -239,18 +264,24 @@ export default function Servers() {
                     </button>
                   </>
                 )}
-                {!settingUp && (
+                {!settingUp && !missing && (
                   <button className="mcsm-primary" onClick={() => setManageId(s.id)}>
                     Manage
                   </button>
                 )}
-                <button onClick={() => setLogsFor(s)}>Logs</button>
-                <button disabled={settingUp} onClick={() => setBackupsFor(s)}>
+                {!missing && <button onClick={() => setLogsFor(s)}>Logs</button>}
+                <button
+                  disabled={settingUp || !s.files_available}
+                  title={s.files_available ? "" : s.note}
+                  onClick={() => setBackupsFor(s)}
+                >
                   Backups
                 </button>
-                <button className="mcsm-danger" disabled={busy} onClick={() => setDeleting(s)}>
-                  Delete
-                </button>
+                {s.managed && (
+                  <button className="mcsm-danger" disabled={busy} onClick={() => setDeleting(s)}>
+                    {missing ? "Remove" : "Delete"}
+                  </button>
+                )}
               </div>
             </div>
           );

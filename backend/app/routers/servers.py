@@ -70,6 +70,12 @@ def restart_server(server_id: str, mgr: Manager):
     return _call(mgr.restart_server, server_id)
 
 
+@router.post("/{server_id}/recreate", response_model=ServerInfo, status_code=202)
+def recreate_server(server_id: str, mgr: Manager):
+    """Make a new container for one of our servers whose container was deleted or lost."""
+    return _call(mgr.recreate_server, server_id)
+
+
 @router.delete("/{server_id}", status_code=204)
 def delete_server(
     server_id: str,
