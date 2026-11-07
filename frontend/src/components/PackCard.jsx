@@ -26,10 +26,16 @@ export default function PackCard({ pack, onCreate }) {
           </span>
         ))}
         {versionLabel && <span className="tag">{versionLabel}</span>}
+        {!pack.server_supported && <span className="tag warn">Client-only</span>}
       </div>
       <div className="card-foot">
         <span className="stats">⬇ {compact(pack.downloads)} · ♥ {compact(pack.follows)}</span>
-        <button className="primary" onClick={onCreate}>
+        <button
+          className="primary"
+          onClick={onCreate}
+          disabled={!pack.server_supported}
+          title={pack.server_supported ? undefined : "This pack is client-only and can't run as a server"}
+        >
           Create server
         </button>
       </div>
