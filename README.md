@@ -106,8 +106,23 @@ and optionally delete ones older than N days. Manual backups are never deleted a
 
 Each server is its own `itzg/minecraft-server` container named `mcsm-<server-id>`, with
 `restart: unless-stopped`. Its files live in `/mnt/user/appdata/minecraft-server-manager/servers/<server-id>`
-on the host. The server's settings (pack, version, port, RAM) are stored as container labels, so
-there is no separate database. The app only ever touches containers labelled `mcsm.managed=true`.
+on the host. The server's settings (pack, version, port, RAM) are stored as container labels, with
+a copy in the server folder at `.mcsm/server.json`. If a server's container is deleted or lost (for
+example after Unraid's docker image is rebuilt), the server still shows up as "Container missing"
+with a **Recreate container** button that rebuilds it from that copy, using the same files.
+
+### Servers the app didn't create
+
+The Servers page also lists every other Minecraft container on the host, marked "Found on host".
+It finds them by image (itzg/minecraft-server, Paper, Purpur, Forge, Fabric, Bedrock and so on), by
+`EULA=TRUE` in their environment, or by port 25565/19132. You can start, stop and restart them, read
+their logs, use the console (itzg images) and see their stats. The app never recreates, renames or
+deletes these containers, and their settings stay in Unraid's Docker tab.
+
+Backups, mods, players lists and server.properties need the app to see the server's files. That
+works when the server's data folder is inside a path mapped into the manager. Add a path in the
+manager's Unraid template that maps, for example, `/mnt/user/appdata` to the same path
+`/mnt/user/appdata`, and the app finds the files on its own.
 
 The Java version is picked from the pack's Minecraft version (1.16 and older use Java 8,
 1.17 Java 16, 1.18 to 1.20.4 Java 17, newer Java 21) and can be overridden when creating.
@@ -173,7 +188,8 @@ Dockerfile           multi-stage build: UI, then Python runtime
 | `POST /api/servers` | Create a server (`source` `custom` with the pack id as `project_id` for a built pack): `{name, source, project_id, project_slug, version_id, minecraft_version, port, memory_gb, java_version?}` |
 | `GET /api/servers/{id}` | One server |
 | `POST /api/servers/{id}/start` · `/stop` · `/restart` | Control a server |
-| `DELETE /api/servers/{id}?delete_data=false` | Remove a server, optionally with its files |
+| `DELETE /api/servers/{id}?delete_data=false` | Remove a server, optionally with its files (not allowed for servers found on the host) |
+| `POST /api/servers/{id}/recreate` | Rebuild the container of a server whose container is missing |
 | `GET /api/servers/{id}/logs?tail=200` | Recent console output |
 | `GET /api/mods/search?source=&q=&game_version=&loader=&category=&sort=&offset=&limit=` | Search mods |
 | `GET /api/mods/filters?source=` | Mod categories and Minecraft versions |

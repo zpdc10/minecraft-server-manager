@@ -663,8 +663,14 @@ export default function ServerManage({ server, onClose, onChanged, initialTab = 
           <button onClick={onClose}>Close</button>
         </div>
         <StatsBar server={server} />
+        {!server.managed && (
+          <p className="mcsm-muted mcsm-small">
+            This server's container wasn't created by this app, so its settings are managed in Unraid's Docker tab.
+            {server.note && ` ${server.note}`}
+          </p>
+        )}
         <div className="mcsm-tabs">
-          {TABS.map(([key, label]) => (
+          {TABS.filter(([key]) => server.managed || key !== "settings").map(([key, label]) => (
             <button key={key} className={`tab${tab === key ? " active" : ""}`} onClick={() => setTab(key)}>
               {label}
             </button>

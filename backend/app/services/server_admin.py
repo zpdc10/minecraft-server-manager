@@ -12,7 +12,7 @@ import re
 import shutil
 from datetime import UTC, datetime
 
-from docker.errors import DockerException, ImageNotFound
+from docker.errors import DockerException
 
 from ..models.admin import (
     ConsoleResult,
@@ -24,7 +24,7 @@ from ..models.admin import (
     UpdateSettingsRequest,
 )
 from ..models.server import ServerInfo
-from .docker_manager import BUILD_ACTIVE_PHASES, DockerManager, ServerConflict
+from .docker_manager import BUILD_ACTIVE_PHASES, DockerManager, ServerConflict, env_dict
 
 # Minecraft colour/format codes and ANSI escapes that rcon-cli passes through.
 _FORMAT_RE = re.compile(r"\x1b\[[0-9;]*m|§.")
@@ -60,8 +60,6 @@ ENV_PROPERTIES = {
     "ENABLE_WHITELIST": "white-list",
     "ENFORCE_WHITELIST": "enforce-whitelist",
 }
-# Env set by this app that the settings editor manages; everything else is kept as-is.
-_OWN_ENV = {"UID", "GID"}
 MAX_UPLOAD_BYTES = 512 * 1024 * 1024
 
 
@@ -112,12 +110,7 @@ def render_properties(original: str, values: dict[str, str]) -> str:
     return "\n".join(out) + "\n"
 
 
-def _env_dict(env_list: list[str] | None) -> dict[str, str]:
-    env = {}
-    for item in env_list or []:
-        k, _, v = item.partition("=")
-        env[k] = v
-    return env
+_env_dict = env_dict
 
 
 class ServerAdmin:
@@ -134,21 +127,25 @@ class ServerAdmin:
         return c
 
     def _path(self, server_id: str, *parts: str) -> str:
-        self.mgr.get_server(server_id)  # 404 for unknown servers
-        return os.path.join(self.mgr.local_data_path(server_id), *parts)
+        info = self.mgr.get_server(server_id)  # 404 for unknown servers
+        base = self.mgr.local_data_path(server_id)
+        if not base:
+            raise ServerConflict(info.note or "The app can't see this server's files.")
+        return os.path.join(base, *parts)
 
-    def _chown(self, path: str) -> None:
+    def _chown(self, server_id: str, path: str) -> None:
+        uid, gid = self.mgr.file_owner(server_id)
         try:
-            os.chown(path, self.mgr.settings.mc_uid, self.mgr.settings.mc_gid)
+            os.chown(path, uid, gid)
         except OSError:
             pass
 
-    def _write(self, path: str, text: str) -> None:
+    def _write(self, server_id: str, path: str, text: str) -> None:
         tmp = path + ".mcsm-tmp"
         with open(tmp, "w") as f:
             f.write(text)
         os.replace(tmp, path)
-        self._chown(path)
+        self._chown(server_id, path)
 
     # ---- console -----------------------------------------------------------
 
@@ -291,13 +288,18 @@ class ServerAdmin:
         if changes:
             with open(path) as f:
                 original = f.read()
-            self._write(path, render_properties(original, changes))
+            self._write(server_id, path, render_properties(original, changes))
         return self.properties(server_id)
 
     # ---- settings (recreates the container) -----------------------------------
 
     def update_settings(self, server_id: str, req: UpdateSettingsRequest) -> ServerInfo:
         mgr = self.mgr
+        if not mgr.is_managed(server_id):
+            raise ServerConflict(
+                "This server wasn't created by the app, so its settings can't be changed here. "
+                "Edit the container in Unraid's Docker tab instead."
+            )
         c = mgr._require(server_id)
         info = mgr.get_server(server_id)
         if info.build is not None and info.build.phase in BUILD_ACTIVE_PHASES:
@@ -305,7 +307,7 @@ class ServerAdmin:
         changes = req.model_dump(exclude_none=True)
         motd = changes.pop("motd", None)
         if "port" in changes and changes["port"] != info.port:
-            used = {p: n for p, n in mgr._used_ports().items() if p != info.port}
+            used = mgr._used_ports(exclude=server_id)
             if changes["port"] in used:
                 raise ServerConflict(f"Port {changes['port']} is already used by server '{used[changes['port']]}'")
         new = info.model_copy(update=changes)
@@ -333,16 +335,7 @@ class ServerAdmin:
         return mgr._info_from_container(container)
 
     def _user_env(self, c) -> dict[str, str]:
-        """The container's env minus what the image and create_container add."""
-        env = _env_dict(c.attrs.get("Config", {}).get("Env"))
-        image_env: dict[str, str] = {}
-        try:
-            image = c.attrs.get("Config", {}).get("Image") or c.attrs.get("Image")
-            if image:
-                image_env = _env_dict(self.mgr.client.images.get(image).attrs.get("Config", {}).get("Env"))
-        except (ImageNotFound, DockerException, AttributeError):
-            pass
-        return {k: v for k, v in env.items() if k not in _OWN_ENV and image_env.get(k) != v}
+        return self.mgr.user_env(c)
 
     # ---- stats ---------------------------------------------------------------
 
@@ -429,10 +422,10 @@ class ServerAdmin:
             raise AdminError("That file is not a valid .jar")
         dest = self._mod_path(server_id, filename)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        self._chown(os.path.dirname(dest))
+        self._chown(server_id, os.path.dirname(dest))
         tmp = dest + ".mcsm-tmp"
         with open(tmp, "wb") as f:
             f.write(data)
         os.replace(tmp, dest)
-        self._chown(dest)
+        self._chown(server_id, dest)
         return self.list_mods(server_id)

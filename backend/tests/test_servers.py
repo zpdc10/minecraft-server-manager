@@ -58,7 +58,12 @@ class FakeContainers:
         self.items: dict[str, FakeContainer] = {}
 
     def list(self, all=False, filters=None):
-        return [c for c in self.items.values() if not c.removed]
+        items = [c for c in self.items.values() if not c.removed]
+        label = (filters or {}).get("label")
+        if label:
+            key, _, value = label.partition("=")
+            items = [c for c in items if (c.labels or {}).get(key) == value]
+        return items
 
     def get(self, name):
         c = self.items.get(name)
