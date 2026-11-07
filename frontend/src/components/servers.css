@@ -15,7 +15,7 @@
 .mcsm-error { color: #d9534f; }
 .mcsm-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: #8884; white-space: nowrap; }
 .mcsm-running { background: #2e7d3233; color: #43a047; }
-.mcsm-starting, .mcsm-pulling, .mcsm-creating, .mcsm-stopping { background: #f9a82533; color: #f9a825; }
+.mcsm-starting, .mcsm-pulling, .mcsm-creating, .mcsm-installing, .mcsm-testing, .mcsm-stopping { background: #f9a82533; color: #f9a825; }
 .mcsm-error.mcsm-badge { background: #d9534f33; }
 .mcsm-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex;
@@ -40,3 +40,7 @@
   margin: 0; background: #000; color: #ddd; padding: 12px; border-radius: 8px; font-size: 12px;
   height: 60vh; overflow: auto; white-space: pre-wrap; word-break: break-word;
 }
+.mcsm-ok { color: #43a047; }
+.mcsm-build { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+.mcsm-build summary { cursor: pointer; }
+.mcsm-removed { margin: 6px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }

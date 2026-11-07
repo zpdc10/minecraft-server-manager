@@ -13,6 +13,8 @@ import "../components/servers.css";
 const STATUS_LABELS = {
   pulling: "Downloading image",
   creating: "Creating",
+  installing: "Installing pack",
+  testing: "Testing",
   starting: "Starting",
   running: "Running",
   stopping: "Stopping",
@@ -23,6 +25,50 @@ const STATUS_LABELS = {
 
 function StatusBadge({ status }) {
   return <span className={`mcsm-badge mcsm-${status}`}>{STATUS_LABELS[status] || status}</span>;
+}
+
+const REASONS = {
+  client_only: "Client-only",
+  known: "Known client-only",
+  missing_dependency: "Missing dependency",
+  crash: "Crashed the server",
+};
+
+function BuildSummary({ build }) {
+  if (!build) return null;
+  const active = ["installing", "scanning", "testing"].includes(build.phase);
+  const tone = build.phase === "failed" ? "mcsm-error" : build.phase === "passed" ? "mcsm-ok" : "mcsm-muted";
+  return (
+    <div className="mcsm-build mcsm-small">
+      <div className={tone}>
+        {active && "⏳ "}
+        {build.phase === "passed" && "✓ "}
+        {build.message}
+      </div>
+      {build.removed.length > 0 && (
+        <details>
+          <summary>
+            Removed {build.removed.length} mod{build.removed.length === 1 ? "" : "s"}
+          </summary>
+          <ul className="mcsm-removed">
+            {build.removed.map((m) => (
+              <li key={m.file}>
+                <strong>{m.name || m.mod_ids[0] || m.file}</strong>{" "}
+                <span className="mcsm-badge">{REASONS[m.reason] || m.reason}</span>
+                <div className="mcsm-muted">
+                  <code>{m.file}</code>
+                  {m.detail && ` · ${m.detail}`}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mcsm-muted">
+            Removed jars are kept in <code>.mcsm/removed-mods</code> in the server folder.
+          </div>
+        </details>
+      )}
+    </div>
+  );
 }
 
 function LogsPanel({ server, onClose }) {
@@ -155,7 +201,7 @@ export default function Servers() {
         {servers?.map((s) => {
           const busy = busyId === s.id;
           const isUp = ["running", "starting"].includes(s.status);
-          const settingUp = ["pulling", "creating"].includes(s.status);
+          const settingUp = ["pulling", "creating", "installing", "testing"].includes(s.status);
           return (
             <div key={s.id} className="mcsm-card">
               <div className="mcsm-card-main">
@@ -170,7 +216,8 @@ export default function Servers() {
                 <div className="mcsm-small">
                   Address: <code>{host}:{s.port}</code>
                 </div>
-                {s.error && <div className="mcsm-error mcsm-small">{s.error}</div>}
+                {s.error && !s.build && <div className="mcsm-error mcsm-small">{s.error}</div>}
+                <BuildSummary build={s.build} />
               </div>
               <div className="mcsm-card-actions">
                 {!isUp && !settingUp && (
@@ -178,7 +225,7 @@ export default function Servers() {
                     Start
                   </button>
                 )}
-                {isUp && (
+                {isUp && !settingUp && (
                   <>
                     <button disabled={busy} onClick={() => act(s, stopServer)}>
                       {busy ? "Working..." : "Stop"}

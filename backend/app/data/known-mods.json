@@ -1,0 +1,871 @@
+{
+ "version": 1,
+ "about": "Mods known to be client-only or to crash dedicated servers. The server builder removes matching jars before test-starting a server. 'ids' match a jar's mod id exactly. 'files' match the start of a jar's file name, or a word inside it. Seeded from itzg/docker-minecraft-server's exclude lists. Edit this file to share fixes with every install.",
+ "mods": [
+  {
+   "ids": [
+    "oculus"
+   ],
+   "reason": "client_only",
+   "note": "Shader loader (Forge)"
+  },
+  {
+   "ids": [
+    "iris"
+   ],
+   "reason": "client_only",
+   "note": "Shader loader (Fabric)"
+  },
+  {
+   "ids": [
+    "sodium"
+   ],
+   "reason": "client_only",
+   "note": "Client rendering optimizer"
+  },
+  {
+   "ids": [
+    "embeddium"
+   ],
+   "reason": "client_only",
+   "note": "Client rendering optimizer"
+  },
+  {
+   "ids": [
+    "rubidium"
+   ],
+   "reason": "client_only",
+   "note": "Client rendering optimizer"
+  },
+  {
+   "ids": [
+    "magnesium"
+   ],
+   "reason": "client_only",
+   "note": "Client rendering optimizer"
+  },
+  {
+   "ids": [
+    "sodium-extra",
+    "sodiumextra"
+   ],
+   "reason": "client_only",
+   "note": "Sodium add-on"
+  },
+  {
+   "ids": [
+    "reeses-sodium-options",
+    "reeses_sodium_options"
+   ],
+   "reason": "client_only",
+   "note": "Sodium options screen"
+  },
+  {
+   "ids": [
+    "indium"
+   ],
+   "reason": "client_only",
+   "note": "Sodium rendering API add-on"
+  },
+  {
+   "ids": [
+    "immediatelyfast"
+   ],
+   "reason": "client_only",
+   "note": "Client rendering optimizer"
+  },
+  {
+   "ids": [
+    "entityculling"
+   ],
+   "reason": "client_only",
+   "note": "Client rendering culling"
+  },
+  {
+   "ids": [
+    "notenoughanimations"
+   ],
+   "reason": "client_only",
+   "note": "Player animations"
+  },
+  {
+   "ids": [
+    "skinlayers3d",
+    "3dskinlayers"
+   ],
+   "reason": "client_only",
+   "note": "3D skin layers"
+  },
+  {
+   "ids": [
+    "betterf3"
+   ],
+   "reason": "client_only",
+   "note": "Debug screen"
+  },
+  {
+   "ids": [
+    "mousetweaks"
+   ],
+   "reason": "client_only",
+   "note": "Inventory mouse tweaks"
+  },
+  {
+   "ids": [
+    "controlling"
+   ],
+   "reason": "client_only",
+   "note": "Key binding search"
+  },
+  {
+   "ids": [
+    "citresewn"
+   ],
+   "reason": "client_only",
+   "note": "Custom item textures"
+  },
+  {
+   "ids": [
+    "continuity"
+   ],
+   "reason": "client_only",
+   "note": "Connected textures"
+  },
+  {
+   "ids": [
+    "ctm"
+   ],
+   "reason": "client_only",
+   "note": "Connected textures"
+  },
+  {
+   "ids": [
+    "fancymenu"
+   ],
+   "reason": "client_only",
+   "note": "Menu customization"
+  },
+  {
+   "ids": [
+    "drippyloadingscreen"
+   ],
+   "reason": "client_only",
+   "note": "Loading screen"
+  },
+  {
+   "ids": [
+    "legendarytooltips"
+   ],
+   "reason": "client_only",
+   "note": "Tooltips"
+  },
+  {
+   "ids": [
+    "itemborders"
+   ],
+   "reason": "client_only",
+   "note": "Item borders"
+  },
+  {
+   "ids": [
+    "lootbeams"
+   ],
+   "reason": "client_only",
+   "note": "Loot beams"
+  },
+  {
+   "ids": [
+    "zume"
+   ],
+   "reason": "client_only",
+   "note": "Zoom"
+  },
+  {
+   "ids": [
+    "ok_zoomer"
+   ],
+   "reason": "client_only",
+   "note": "Zoom"
+  },
+  {
+   "ids": [
+    "zoomify"
+   ],
+   "reason": "client_only",
+   "note": "Zoom"
+  },
+  {
+   "ids": [
+    "euphoria_patcher"
+   ],
+   "reason": "client_only",
+   "note": "Shader patches"
+  },
+  {
+   "ids": [
+    "entity_model_features"
+   ],
+   "reason": "client_only",
+   "note": "Entity models"
+  },
+  {
+   "ids": [
+    "entity_texture_features"
+   ],
+   "reason": "client_only",
+   "note": "Entity textures"
+  },
+  {
+   "ids": [
+    "ambientsounds"
+   ],
+   "reason": "client_only",
+   "note": "Ambient sounds"
+  },
+  {
+   "ids": [
+    "presencefootsteps"
+   ],
+   "reason": "client_only",
+   "note": "Footstep sounds"
+  },
+  {
+   "ids": [
+    "sound_physics_remastered"
+   ],
+   "reason": "client_only",
+   "note": "Sound effects"
+  },
+  {
+   "ids": [
+    "betterthirdperson"
+   ],
+   "reason": "client_only",
+   "note": "Camera"
+  },
+  {
+   "ids": [
+    "shouldersurfing"
+   ],
+   "reason": "client_only",
+   "note": "Camera"
+  },
+  {
+   "ids": [
+    "fallingleaves"
+   ],
+   "reason": "client_only",
+   "note": "Leaf particles"
+  },
+  {
+   "ids": [
+    "particlerain"
+   ],
+   "reason": "client_only",
+   "note": "Weather particles"
+  },
+  {
+   "ids": [
+    "visuality"
+   ],
+   "reason": "client_only",
+   "note": "Particles"
+  },
+  {
+   "ids": [
+    "craftpresence"
+   ],
+   "reason": "client_only",
+   "note": "Discord rich presence"
+  },
+  {
+   "ids": [
+    "bobby"
+   ],
+   "reason": "client_only",
+   "note": "Client chunk cache"
+  },
+  {
+   "ids": [
+    "chat_heads"
+   ],
+   "reason": "client_only",
+   "note": "Chat heads"
+  },
+  {
+   "ids": [
+    "blur"
+   ],
+   "reason": "client_only",
+   "note": "Menu blur"
+  },
+  {
+   "ids": [
+    "enhancedvisuals"
+   ],
+   "reason": "client_only",
+   "note": "Screen effects"
+  },
+  {
+   "ids": [
+    "dynamiclightsreforged",
+    "lambdynlights",
+    "ryoamiclights"
+   ],
+   "reason": "client_only",
+   "note": "Dynamic lights"
+  },
+  {
+   "ids": [
+    "seamless_loading_screen"
+   ],
+   "reason": "client_only",
+   "note": "Loading screen"
+  },
+  {
+   "ids": [
+    "xaerominimap",
+    "xaeroworldmap",
+    "xaeroplus"
+   ],
+   "reason": "client_only",
+   "note": "Minimap / world map"
+  },
+  {
+   "ids": [
+    "cherishedworlds"
+   ],
+   "reason": "client_only",
+   "note": "World list"
+  },
+  {
+   "ids": [
+    "betteradvancements"
+   ],
+   "reason": "client_only",
+   "note": "Advancement screen"
+  },
+  {
+   "ids": [
+    "fastquit"
+   ],
+   "reason": "client_only",
+   "note": "Quit to title faster"
+  },
+  {
+   "ids": [
+    "toastcontrol"
+   ],
+   "reason": "client_only",
+   "note": "Toast popups"
+  },
+  {
+   "ids": [
+    "smoothswapping"
+   ],
+   "reason": "client_only",
+   "note": "Inventory animation"
+  },
+  {
+   "ids": [
+    "justzoom"
+   ],
+   "reason": "client_only",
+   "note": "Zoom"
+  },
+  {
+   "ids": [
+    "fpsreducer"
+   ],
+   "reason": "client_only",
+   "note": "FPS limiter"
+  },
+  {
+   "ids": [
+    "fullscreen",
+    "fullscreenwindowed"
+   ],
+   "reason": "client_only",
+   "note": "Window mode"
+  },
+  {
+   "ids": [
+    "menumobs"
+   ],
+   "reason": "client_only",
+   "note": "Menu mobs"
+  },
+  {
+   "ids": [
+    "textrues_embeddium_options",
+    "textrues_rubidium_options"
+   ],
+   "reason": "client_only",
+   "note": "Video options"
+  },
+  {
+   "ids": [
+    "flerovium"
+   ],
+   "reason": "client_only",
+   "note": "Client rendering optimizer"
+  },
+  {
+   "ids": [
+    "searchables"
+   ],
+   "reason": "client_only",
+   "note": "Search bars"
+  },
+  {
+   "ids": [
+    "seasonhud"
+   ],
+   "reason": "client_only",
+   "note": "Season HUD"
+  },
+  {
+   "ids": [
+    "torohealth"
+   ],
+   "reason": "client_only",
+   "note": "Damage indicators"
+  },
+  {
+   "ids": [
+    "immersive_damage_indicators",
+    "immersivedamageindicators"
+   ],
+   "reason": "client_only",
+   "note": "Damage indicators"
+  },
+  {
+   "ids": [
+    "auudio"
+   ],
+   "reason": "client_only",
+   "note": "Menu audio"
+  },
+  {
+   "ids": [
+    "yungsmenutweaks"
+   ],
+   "reason": "client_only",
+   "note": "Menu tweaks"
+  }
+ ],
+ "files": [
+  {
+   "match": "3dskinlayers",
+   "reason": "client_only"
+  },
+  {
+   "match": "ae2-emi-crafting",
+   "reason": "client_only"
+  },
+  {
+   "match": "AmbientSounds",
+   "reason": "client_only"
+  },
+  {
+   "match": "amecs",
+   "reason": "client_only"
+  },
+  {
+   "match": "Animation_Overhaul",
+   "reason": "client_only"
+  },
+  {
+   "match": "auudio",
+   "reason": "client_only"
+  },
+  {
+   "match": "axolotlbuckets",
+   "reason": "client_only"
+  },
+  {
+   "match": "BadOptimizations",
+   "reason": "client_only"
+  },
+  {
+   "match": "BetterAdvancements",
+   "reason": "client_only"
+  },
+  {
+   "match": "betterbeds",
+   "reason": "client_only"
+  },
+  {
+   "match": "BetterF3",
+   "reason": "client_only"
+  },
+  {
+   "match": "BetterGrassify",
+   "reason": "client_only"
+  },
+  {
+   "match": "BetterThirdPerson",
+   "reason": "client_only"
+  },
+  {
+   "match": "BHMenu",
+   "reason": "client_only"
+  },
+  {
+   "match": "blur",
+   "reason": "client_only"
+  },
+  {
+   "match": "Boat-Item-View",
+   "reason": "client_only"
+  },
+  {
+   "match": "bobby",
+   "reason": "client_only"
+  },
+  {
+   "match": "cat_jam",
+   "reason": "client_only"
+  },
+  {
+   "match": "chat_heads",
+   "reason": "client_only"
+  },
+  {
+   "match": "chatanimation",
+   "reason": "client_only"
+  },
+  {
+   "match": "cherishedworlds",
+   "reason": "client_only"
+  },
+  {
+   "match": "citresewn",
+   "reason": "client_only"
+  },
+  {
+   "match": "clickadv",
+   "reason": "client_only"
+  },
+  {
+   "match": "cobblemon-ui-tweaks",
+   "reason": "client_only"
+  },
+  {
+   "match": "colorwheel",
+   "reason": "client_only"
+  },
+  {
+   "match": "compass-coords",
+   "reason": "client_only"
+  },
+  {
+   "match": "connectedness",
+   "reason": "client_only"
+  },
+  {
+   "match": "continuity",
+   "reason": "client_only"
+  },
+  {
+   "match": "controlling",
+   "reason": "client_only"
+  },
+  {
+   "match": "craftpresence",
+   "reason": "client_only"
+  },
+  {
+   "match": "CrashAssistant",
+   "reason": "client_only"
+  },
+  {
+   "match": "Cull Less Leaves",
+   "reason": "client_only"
+  },
+  {
+   "match": "cwb",
+   "reason": "client_only"
+  },
+  {
+   "match": "DisableCustomWorldsAdvice",
+   "reason": "client_only"
+  },
+  {
+   "match": "distraction_free_recipes",
+   "reason": "client_only"
+  },
+  {
+   "match": "drippyloadingscreen",
+   "reason": "client_only"
+  },
+  {
+   "match": "eating-animation",
+   "reason": "client_only"
+  },
+  {
+   "match": "emi_trade",
+   "reason": "client_only"
+  },
+  {
+   "match": "emiffect",
+   "reason": "client_only"
+  },
+  {
+   "match": "emitrades",
+   "reason": "client_only"
+  },
+  {
+   "match": "entity_model_features",
+   "reason": "client_only"
+  },
+  {
+   "match": "entity_texture_features",
+   "reason": "client_only"
+  },
+  {
+   "match": "entityculling",
+   "reason": "client_only"
+  },
+  {
+   "match": "euphoriapatcher",
+   "reason": "client_only"
+  },
+  {
+   "match": "fallingleaves",
+   "reason": "client_only"
+  },
+  {
+   "match": "fancymenu",
+   "reason": "client_only"
+  },
+  {
+   "match": "fast-ip-ping",
+   "reason": "client_only"
+  },
+  {
+   "match": "fastquit",
+   "reason": "client_only"
+  },
+  {
+   "match": "feytweaks",
+   "reason": "client_only"
+  },
+  {
+   "match": "ForgeConfigScreens",
+   "reason": "client_only"
+  },
+  {
+   "match": "GeckoLibIrisCompat",
+   "reason": "client_only"
+  },
+  {
+   "match": "gpumemleakfix",
+   "reason": "client_only"
+  },
+  {
+   "match": "Highlighter",
+   "reason": "client_only"
+  },
+  {
+   "match": "ImmediatelyFast",
+   "reason": "client_only"
+  },
+  {
+   "match": "immersivedamageindicators",
+   "reason": "client_only"
+  },
+  {
+   "match": "indium",
+   "reason": "client_only"
+  },
+  {
+   "match": "inventory-profiles-next",
+   "reason": "client_only"
+  },
+  {
+   "match": "iris",
+   "reason": "client_only"
+  },
+  {
+   "match": "iris-flywheel",
+   "reason": "client_only"
+  },
+  {
+   "match": "ItemBorders",
+   "reason": "client_only"
+  },
+  {
+   "match": "ItemLocks",
+   "reason": "client_only"
+  },
+  {
+   "match": "justzoom",
+   "reason": "client_only"
+  },
+  {
+   "match": "language-reload",
+   "reason": "client_only"
+  },
+  {
+   "match": "lazy-language-loader",
+   "reason": "client_only"
+  },
+  {
+   "match": "LegendaryTooltips",
+   "reason": "client_only"
+  },
+  {
+   "match": "loadmyresources",
+   "reason": "client_only"
+  },
+  {
+   "match": "lootbeams",
+   "reason": "client_only"
+  },
+  {
+   "match": "MindfulDarkness",
+   "reason": "client_only"
+  },
+  {
+   "match": "miningspeedtooltips",
+   "reason": "client_only"
+  },
+  {
+   "match": "MouseTweaks",
+   "reason": "client_only"
+  },
+  {
+   "match": "nicer-skies",
+   "reason": "client_only"
+  },
+  {
+   "match": "notenoughanimations",
+   "reason": "client_only"
+  },
+  {
+   "match": "oculus",
+   "reason": "client_only"
+  },
+  {
+   "match": "ok_zoomer",
+   "reason": "client_only"
+  },
+  {
+   "match": "OverflowingBars",
+   "reason": "client_only"
+  },
+  {
+   "match": "particlerain",
+   "reason": "client_only"
+  },
+  {
+   "match": "PickUpNotifier",
+   "reason": "client_only"
+  },
+  {
+   "match": "PresenceFootsteps",
+   "reason": "client_only"
+  },
+  {
+   "match": "Prism",
+   "reason": "client_only"
+  },
+  {
+   "match": "reeses_sodium_options",
+   "reason": "client_only"
+  },
+  {
+   "match": "reforgium",
+   "reason": "client_only"
+  },
+  {
+   "match": "ResourcePackOverrides",
+   "reason": "client_only"
+  },
+  {
+   "match": "roughly-enough-items",
+   "reason": "client_only"
+  },
+  {
+   "match": "ryoamiclights",
+   "reason": "client_only"
+  },
+  {
+   "match": "screenshot_viewer",
+   "reason": "client_only"
+  },
+  {
+   "match": "Searchables",
+   "reason": "client_only"
+  },
+  {
+   "match": "seasonhud",
+   "reason": "client_only"
+  },
+  {
+   "match": "ShoulderSurfing",
+   "reason": "client_only"
+  },
+  {
+   "match": "skinlayers3d",
+   "reason": "client_only"
+  },
+  {
+   "match": "smoothswapping",
+   "reason": "client_only"
+  },
+  {
+   "match": "sodium",
+   "reason": "client_only"
+  },
+  {
+   "match": "sorted_enchantments",
+   "reason": "client_only"
+  },
+  {
+   "match": "tooltipfix",
+   "reason": "client_only"
+  },
+  {
+   "match": "visuality",
+   "reason": "client_only"
+  },
+  {
+   "match": "VR-Combat",
+   "reason": "client_only"
+  },
+  {
+   "match": "WailaStages",
+   "reason": "client_only"
+  },
+  {
+   "match": "welcomescreen",
+   "reason": "client_only"
+  },
+  {
+   "match": "Xaeros_Minimap",
+   "reason": "client_only"
+  },
+  {
+   "match": "XaerosWorldMap",
+   "reason": "client_only"
+  },
+  {
+   "match": "YeetusExperimentus",
+   "reason": "client_only"
+  },
+  {
+   "match": "yungsmenutweaks",
+   "reason": "client_only"
+  },
+  {
+   "match": "Zoomify",
+   "reason": "client_only"
+  },
+  {
+   "match": "zume",
+   "reason": "client_only"
+  }
+ ]
+}

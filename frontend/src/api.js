@@ -87,4 +87,9 @@ export const api = {
   settings: () => get("/api/settings"),
   saveCurseForgeKey: (apiKey) => send("/api/settings/curseforge", "PUT", { api_key: apiKey }),
   testCurseForgeKey: () => send("/api/settings/curseforge/test", "POST"),
+  modDb: () => get("/api/mod-db"),
+  forgetLearnedMod: async (modId) => {
+    const resp = await fetch(`/api/mod-db/learned/${encodeURIComponent(modId)}`, { method: "DELETE" });
+    if (!resp.ok) throw new Error(resp.statusText);
+  },
 };

@@ -43,6 +43,9 @@ class FakeContainer:
     def reload(self):
         pass
 
+    def update(self, **kwargs):
+        self.kwargs.update(kwargs)
+
     def remove(self, force=False):
         self.removed = True
 
@@ -122,6 +125,8 @@ def modrinth_req(**kw):
         minecraft_version="1.20.1",
         port=25565,
         memory_gb=6,
+        # The install-and-test builder has its own tests in test_builder.py.
+        auto_fix=False,
     )
     return {**base, **kw}
 

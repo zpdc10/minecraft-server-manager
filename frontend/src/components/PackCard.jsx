@@ -40,10 +40,13 @@ export default function PackCard({ pack, onCreate, onSimilar, children }) {
           <button
             className="primary"
             onClick={onCreate}
-            disabled={!pack.server_supported}
-            title={pack.server_supported ? undefined : "This pack is client-only and can't run as a server"}
+            title={
+              pack.server_supported
+                ? undefined
+                : "This pack is made for the client. The server builder installs it, removes client-only mods and tests that it starts."
+            }
           >
-            Create server
+            {pack.server_supported ? "Create server" : "Build server"}
           </button>
         </div>
       </div>
