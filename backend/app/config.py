@@ -24,6 +24,23 @@ class Settings:
     )
     # Where UI-editable settings (settings.json) are stored.
     data_dir: str = field(default_factory=lambda: os.environ.get("DATA_DIR", "/data"))
+    # --- Server management ---
+    # Where server data folders live, as seen from inside this app's container.
+    # Each server gets <data_root>/<server id>, mounted as /data in its container.
+    data_root: str = field(default_factory=lambda: os.environ.get("DATA_ROOT", "/data/servers"))
+    # The same folder as seen from the Docker host. Minecraft containers are created by
+    # the host's Docker daemon, so their bind mounts need host paths. When empty, the app
+    # works it out from its own container's mounts, or assumes the paths are the same.
+    host_data_root: str = field(default_factory=lambda: os.environ.get("HOST_DATA_ROOT", ""))
+    # Optional Docker network to attach Minecraft containers to.
+    docker_network: str = field(default_factory=lambda: os.environ.get("DOCKER_NETWORK", ""))
+    # Image used for Minecraft servers. A Java tag such as ":java17" is appended.
+    mc_image: str = field(default_factory=lambda: os.environ.get("MC_IMAGE", "itzg/minecraft-server"))
+    # Prefix for container names, so we never touch containers we didn't create.
+    container_prefix: str = field(default_factory=lambda: os.environ.get("CONTAINER_PREFIX", "mcsm-"))
+    # User and group the Minecraft server runs as. Unraid's appdata convention is 99:100.
+    mc_uid: int = field(default_factory=lambda: int(os.environ.get("MC_UID", "99")))
+    mc_gid: int = field(default_factory=lambda: int(os.environ.get("MC_GID", "100")))
     static_dir: str = field(default_factory=lambda: os.environ.get("STATIC_DIR", "/app/static"))
 
 

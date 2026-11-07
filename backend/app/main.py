@@ -8,14 +8,14 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import APP_VERSION, settings
 from .providers import ProviderError
-from .routers import search
+from .routers import search, servers
 from .routers import settings as settings_router
 
 app = FastAPI(title="Minecraft Server Manager", version=APP_VERSION)
 
 app.include_router(search.router)
 app.include_router(settings_router.router)
-# Step 2 adds: app.include_router(servers.router)
+app.include_router(servers.router)
 
 
 @app.exception_handler(ProviderError)
