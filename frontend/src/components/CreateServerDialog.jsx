@@ -91,7 +91,8 @@ export default function CreateServerDialog({
         <h2>Create server</h2>
         {source !== "vanilla" && (
           <p className="mcsm-muted">
-            {title || projectSlug || projectId} from {source === "curseforge" ? "CurseForge" : "Modrinth"}
+            {title || projectSlug || projectId}
+            {source === "custom" ? " (your custom pack)" : ` from ${source === "curseforge" ? "CurseForge" : "Modrinth"}`}
             {minecraftVersion && ` · Minecraft ${minecraftVersion}`}
             {loader && ` · ${loader}`}
           </p>
