@@ -1,21 +1,19 @@
 import { useState } from "react";
+import CreateServerDialog from "./components/CreateServerDialog.jsx";
 import Search from "./pages/Search.jsx";
+import Servers from "./pages/Servers.jsx";
 import Settings from "./pages/Settings.jsx";
 
-// Pages are added to this list (step 2 adds "Servers").
 const PAGES = [
   { id: "search", label: "Find modpacks" },
+  { id: "servers", label: "Servers" },
   { id: "settings", label: "Settings" },
 ];
 
 export default function App() {
   const [page, setPage] = useState("search");
-
-  // Called when the user picks a pack version to turn into a server.
-  // Step 2 replaces this with its CreateServerDialog.
-  function handleCreate({ source, projectId, versionId, title }) {
-    alert(`Server creation is coming soon.\n\n${title} (${source} ${projectId}, version ${versionId})`);
-  }
+  // The pack version the user picked to turn into a server, or null.
+  const [creating, setCreating] = useState(null);
 
   return (
     <div className="app">
@@ -30,9 +28,16 @@ export default function App() {
         </nav>
       </header>
       <main>
-        {page === "search" && <Search onCreate={handleCreate} onOpenSettings={() => setPage("settings")} />}
+        {page === "search" && <Search onCreate={setCreating} onOpenSettings={() => setPage("settings")} />}
+        {page === "servers" && <Servers />}
         {page === "settings" && <Settings />}
       </main>
+      <CreateServerDialog
+        open={creating !== null}
+        {...(creating || {})}
+        onClose={() => setCreating(null)}
+        onCreated={() => setPage("servers")}
+      />
     </div>
   );
 }

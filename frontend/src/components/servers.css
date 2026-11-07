@@ -1,0 +1,42 @@
+/* Styles for server management. Scoped with an mcsm- prefix to avoid clashes. */
+.mcsm-servers { max-width: 960px; margin: 0 auto; padding: 16px; }
+.mcsm-servers-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mcsm-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.mcsm-card {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--panel);
+}
+.mcsm-card-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mcsm-card-title { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; }
+.mcsm-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.mcsm-muted { color: var(--muted); }
+.mcsm-small { font-size: 0.875rem; }
+.mcsm-error { color: #d9534f; }
+.mcsm-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: #8884; white-space: nowrap; }
+.mcsm-running { background: #2e7d3233; color: #43a047; }
+.mcsm-starting, .mcsm-pulling, .mcsm-creating, .mcsm-stopping { background: #f9a82533; color: #f9a825; }
+.mcsm-error.mcsm-badge { background: #d9534f33; }
+.mcsm-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); display: flex;
+  align-items: center; justify-content: center; padding: 16px; z-index: 50;
+}
+.mcsm-dialog {
+  background: var(--panel); color: var(--text); border-radius: 12px; padding: 20px;
+  width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); max-height: calc(100vh - 32px); overflow: auto;
+}
+.mcsm-dialog h2 { margin: 0; font-size: 1.2rem; }
+.mcsm-dialog label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; flex: 1; }
+.mcsm-dialog input, .mcsm-dialog select { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); font: inherit; }
+.mcsm-dialog label.mcsm-check { flex-direction: row; align-items: flex-start; gap: 8px; }
+.mcsm-row { display: flex; gap: 12px; }
+.mcsm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.mcsm-primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.mcsm-danger { color: #d9534f; }
+.mcsm-logs { max-width: 900px; }
+.mcsm-logs-head { display: flex; justify-content: space-between; align-items: center; }
+.mcsm-logs pre {
+  margin: 0; background: #000; color: #ddd; padding: 12px; border-radius: 8px; font-size: 12px;
+  height: 60vh; overflow: auto; white-space: pre-wrap; word-break: break-word;
+}

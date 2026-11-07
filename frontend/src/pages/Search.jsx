@@ -174,7 +174,15 @@ export default function Search({ onCreate, onOpenSettings }) {
           onClose={() => setPicking(null)}
           onPick={(version) => {
             setPicking(null);
-            onCreate({ source: picking.source, projectId: picking.id, versionId: version.id, title: picking.title });
+            onCreate({
+              source: picking.source,
+              projectId: picking.id,
+              projectSlug: picking.slug,
+              versionId: version.id,
+              title: picking.title,
+              minecraftVersion: version.game_versions?.[0] || "",
+              loader: version.loaders?.[0] || "",
+            });
           }}
         />
       )}

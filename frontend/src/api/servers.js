@@ -1,0 +1,33 @@
+// Client for the /api/servers endpoints.
+
+async function request(path, options = {}) {
+  const res = await fetch(`/api/servers${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (typeof body.detail === "string") detail = body.detail;
+      else if (Array.isArray(body.detail))
+        detail = body.detail.map((d) => `${d.loc?.slice(-1)[0]}: ${d.msg}`).join(", ");
+    } catch {
+      /* not JSON */
+    }
+    throw new Error(detail);
+  }
+  if (res.status === 204) return null;
+  const type = res.headers.get("content-type") || "";
+  return type.includes("application/json") ? res.json() : res.text();
+}
+
+export const listServers = () => request("");
+export const getServer = (id) => request(`/${encodeURIComponent(id)}`);
+export const createServer = (body) => request("", { method: "POST", body: JSON.stringify(body) });
+export const startServer = (id) => request(`/${encodeURIComponent(id)}/start`, { method: "POST" });
+export const stopServer = (id) => request(`/${encodeURIComponent(id)}/stop`, { method: "POST" });
+export const restartServer = (id) => request(`/${encodeURIComponent(id)}/restart`, { method: "POST" });
+export const deleteServer = (id, deleteData = false) =>
+  request(`/${encodeURIComponent(id)}?delete_data=${deleteData}`, { method: "DELETE" });
+export const getLogs = (id, tail = 300) => request(`/${encodeURIComponent(id)}/logs?tail=${tail}`);
