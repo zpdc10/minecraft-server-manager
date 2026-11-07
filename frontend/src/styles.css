@@ -120,6 +120,8 @@ main { padding: 20px; max-width: 1400px; margin: 0 auto; }
   background: var(--bg);
 }
 .panel a { color: var(--accent); }
+.tag.warn { background: #f0ad4e33; color: #b36b00; }
+@media (prefers-color-scheme: dark) { .tag.warn { color: #f0ad4e; } }
 .card-actions { display: flex; gap: 6px; }
 /* Similar packs */
 .similar-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }

@@ -22,6 +22,8 @@ class Modpack(BaseModel):
     game_versions: list[str]
     updated: str | None = None
     url: str
+    # False for client-only packs that can't run as a server.
+    server_supported: bool = True
 
 
 class SearchResult(BaseModel):
