@@ -106,3 +106,17 @@ main { padding: 20px; max-width: 1400px; margin: 0 auto; }
   main { padding: 16px; }
   .search { grid-template-columns: 1fr; }
 }
+.settings { max-width: 720px; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.panel h2 { margin-top: 0; font-size: 18px; }
+.muted { color: var(--muted); }
+.ok { color: var(--accent); }
+.key-form { display: flex; flex-wrap: wrap; gap: 8px; }
+.key-form input {
+  flex: 1 1 260px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.panel a { color: var(--accent); }

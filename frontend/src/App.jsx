@@ -1,8 +1,12 @@
 import { useState } from "react";
 import Search from "./pages/Search.jsx";
+import Settings from "./pages/Settings.jsx";
 
 // Pages are added to this list (step 2 adds "Servers").
-const PAGES = [{ id: "search", label: "Find modpacks" }];
+const PAGES = [
+  { id: "search", label: "Find modpacks" },
+  { id: "settings", label: "Settings" },
+];
 
 export default function App() {
   const [page, setPage] = useState("search");
@@ -25,7 +29,10 @@ export default function App() {
           ))}
         </nav>
       </header>
-      <main>{page === "search" && <Search onCreate={handleCreate} />}</main>
+      <main>
+        {page === "search" && <Search onCreate={handleCreate} onOpenSettings={() => setPage("settings")} />}
+        {page === "settings" && <Settings />}
+      </main>
     </div>
   );
 }

@@ -22,3 +22,12 @@ class ModpackProvider(Protocol):
     async def filter_options(self) -> FilterOptions: ...
 
     async def get_versions(self, project_id: str) -> list[PackVersion]: ...
+
+
+class ProviderError(Exception):
+    """A provider failure with a message that is safe to show in the UI."""
+
+    def __init__(self, message: str, status_code: int = 502):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code

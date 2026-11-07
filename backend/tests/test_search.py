@@ -63,7 +63,7 @@ def test_upstream_error_returns_502():
 
 
 def test_unknown_source_rejected():
-    assert client.get("/api/search", params={"source": "curseforge"}).status_code == 400
+    assert client.get("/api/search", params={"source": "nope"}).status_code == 422
 
 
 @respx.mock
