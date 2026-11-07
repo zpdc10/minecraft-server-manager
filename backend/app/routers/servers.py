@@ -47,7 +47,11 @@ def list_servers(mgr: Manager):
 
 @router.post("", response_model=ServerInfo, status_code=202)
 def create_server(req: CreateServerRequest, mgr: Manager):
-    return _call(mgr.create_server, req)
+    from .cloudflare import on_server_created
+
+    info = _call(mgr.create_server, req)
+    on_server_created(info.id, info.port)
+    return info
 
 
 @router.get("/{server_id}", response_model=ServerInfo)
@@ -82,7 +86,10 @@ def delete_server(
     mgr: Manager,
     delete_data: Annotated[bool, Query(description="Also delete the world and server files")] = False,
 ):
+    from .cloudflare import on_server_deleted
+
     _call(mgr.delete_server, server_id, delete_data=delete_data)
+    on_server_deleted(server_id)
 
 
 @router.get("/{server_id}/logs", response_class=PlainTextResponse)

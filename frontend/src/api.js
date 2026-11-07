@@ -90,6 +90,37 @@ export const api = {
   backupLocation: () => get("/api/backups/location"),
   saveBackupLocation: (path) => send("/api/backups/location", "PUT", { path }),
   modDb: () => get("/api/mod-db"),
+  cloudflare: () => get("/api/cloudflare"),
+  saveCloudflareToken: (apiToken) => send("/api/cloudflare/token", "PUT", { api_token: apiToken }),
+  cloudflareZones: () => get("/api/cloudflare/zones"),
+  saveCloudflareConfig: (body) => send("/api/cloudflare/config", "PUT", body),
+  syncCloudflare: () => send("/api/cloudflare/sync", "POST"),
+  disconnectCloudflare: async () => {
+    const resp = await fetch("/api/cloudflare", { method: "DELETE" });
+    if (!resp.ok) {
+      let detail = resp.statusText;
+      try {
+        detail = (await resp.json()).detail ?? detail;
+      } catch {
+        /* not JSON */
+      }
+      throw new Error(detail);
+    }
+  },
+  publicRoutes: () => get("/api/cloudflare/routes"),
+  setPublicRoute: (serverId, body) => send(`/api/cloudflare/routes/${encodeURIComponent(serverId)}`, "PUT", body),
+  removePublicRoute: async (serverId) => {
+    const resp = await fetch(`/api/cloudflare/routes/${encodeURIComponent(serverId)}`, { method: "DELETE" });
+    if (!resp.ok) {
+      let detail = resp.statusText;
+      try {
+        detail = (await resp.json()).detail ?? detail;
+      } catch {
+        /* not JSON */
+      }
+      throw new Error(detail);
+    }
+  },
   forgetLearnedMod: async (modId) => {
     const resp = await fetch(`/api/mod-db/learned/${encodeURIComponent(modId)}`, { method: "DELETE" });
     if (!resp.ok) throw new Error(resp.statusText);

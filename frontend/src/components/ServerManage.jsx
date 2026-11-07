@@ -14,6 +14,7 @@ import {
   updateSettings,
   uploadMod,
 } from "../api/servers.js";
+import PublicAddressTab from "./PublicAddressTab.jsx";
 import "./servers.css";
 
 const TABS = [
@@ -21,6 +22,7 @@ const TABS = [
   ["players", "Players"],
   ["properties", "server.properties"],
   ["mods", "Mods"],
+  ["public", "Public address"],
   ["settings", "Settings"],
 ];
 
@@ -681,6 +683,7 @@ export default function ServerManage({ server, onClose, onChanged, initialTab = 
           {tab === "players" && <PlayersTab server={server} />}
           {tab === "properties" && <PropertiesTab server={server} running={running} />}
           {tab === "mods" && <ModsTab server={server} running={running} />}
+          {tab === "public" && <PublicAddressTab server={server} />}
           {tab === "settings" && <SettingsTab server={server} running={running} onChanged={onChanged} />}
         </div>
       </div>

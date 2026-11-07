@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import APP_VERSION, settings
 from .providers import ProviderError
-from .routers import backups, custom_packs, mod_db, search, server_admin, servers, similar
+from .routers import backups, cloudflare, custom_packs, mod_db, search, server_admin, servers, similar
 from .routers import settings as settings_router
 
 
@@ -21,9 +21,19 @@ async def lifespan(_: FastAPI):
     if os.environ.get("BACKUP_SCHEDULER", "true").lower() not in ("0", "false", "no"):
         scheduler = backups.get_backups()
         scheduler.start_scheduler()
+    # Keeps tunnel ports and the public IP for direct-mode DNS records up to date.
+    cf_sync = None
+    if os.environ.get("CLOUDFLARE_SYNC", "true").lower() not in ("0", "false", "no"):
+        from .routers.servers import get_manager
+        from .services.cloudflare import SyncLoop
+
+        cf_sync = SyncLoop(get_manager)
+        cf_sync.start()
     yield
     if scheduler is not None:
         scheduler.stop_scheduler()
+    if cf_sync is not None:
+        cf_sync.stop()
 
 
 app = FastAPI(title="Minecraft Server Manager", version=APP_VERSION, lifespan=lifespan)
@@ -36,6 +46,7 @@ app.include_router(mod_db.router)
 app.include_router(custom_packs.router)
 app.include_router(similar.router)
 app.include_router(backups.router)
+app.include_router(cloudflare.router)
 
 
 @app.exception_handler(ProviderError)

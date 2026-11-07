@@ -69,7 +69,11 @@ def save_properties(server_id: str, req: PropertiesUpdate, mgr: Manager):
 
 @router.patch("/settings", response_model=ServerInfo)
 def update_settings(server_id: str, req: UpdateSettingsRequest, mgr: Manager):
-    return _admin("update_settings", mgr, server_id, req)
+    from .cloudflare import on_server_changed
+
+    info = _admin("update_settings", mgr, server_id, req)
+    on_server_changed(server_id, info.port)
+    return info
 
 
 @router.get("/stats", response_model=ServerStats)

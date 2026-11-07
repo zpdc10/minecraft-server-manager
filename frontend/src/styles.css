@@ -141,3 +141,12 @@ main { padding: 20px; max-width: 1400px; margin: 0 auto; }
 .shared-mods a.tag { color: var(--text); text-decoration: none; }
 .shared-mods a.tag:hover { text-decoration: underline; }
 .shared-mods .link { font-size: 12px; }
+
+/* Cloudflare settings */
+.cf-config { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.cf-config label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; }
+.cf-config label.check { flex-direction: row; align-items: center; gap: 8px; }
+.cf-config label.check input { width: auto; margin: 0; }
+.cf-config p.small { margin: 0; font-size: 0.85rem; }
+.settings details { margin: 8px 0; }
+.settings details summary { cursor: pointer; }
