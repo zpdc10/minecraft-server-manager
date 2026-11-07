@@ -41,6 +41,9 @@ class Settings:
     # User and group the Minecraft server runs as. Unraid's appdata convention is 99:100.
     mc_uid: int = field(default_factory=lambda: int(os.environ.get("MC_UID", "99")))
     mc_gid: int = field(default_factory=lambda: int(os.environ.get("MC_GID", "100")))
+    # --- Similar packs ---
+    # How many of the most downloaded Modrinth packs the similar-pack index covers.
+    similar_index_size: int = field(default_factory=lambda: int(os.environ.get("SIMILAR_INDEX_SIZE", "1000")))
     static_dir: str = field(default_factory=lambda: os.environ.get("STATIC_DIR", "/app/static"))
 
 
