@@ -6,13 +6,14 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from ..services import playit
 from ..services.cloudflare import CloudflareError, get_cloudflare, player_command
 from .servers import Manager, _call
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/cloudflare", tags=["cloudflare"])
 
-Mode = Literal["tunnel", "direct"]
+Mode = Literal["tunnel", "direct", "playit"]
 
 
 class Zone(BaseModel):
@@ -36,7 +37,15 @@ class CloudflareStatus(BaseModel):
     auto_route: bool = False
     default_mode: Mode = "tunnel"
     direct_target: str = ""
+    # playit.gg agent container: running | exited | missing | ...
+    playit_key_set: bool = False
+    playit_status: str = "missing"
     error: str = ""
+
+
+class PlayitKeyUpdate(BaseModel):
+    # Empty removes the agent container.
+    secret_key: str
 
 
 class TokenUpdate(BaseModel):
@@ -60,11 +69,15 @@ class Route(BaseModel):
     connect_address: str
     # Tunnel mode: the command each player runs first.
     player_command: str = ""
+    # playit mode: the address playit gave the tunnel, and where it really leads.
+    playit_address: str = ""
+    target: str = ""
 
 
 class RouteUpdate(BaseModel):
     subdomain: str = ""
     mode: Mode | None = None
+    playit_address: str = ""
 
 
 def _cf_call(fn, *args, **kwargs):
@@ -87,7 +100,10 @@ def _status(mgr) -> CloudflareStatus:
         auto_route=bool(cfg.get("auto_route")),
         default_mode=cfg.get("default_mode") or "tunnel",
         direct_target=cfg.get("direct_target", ""),
+        playit_key_set=bool(cfg.get("playit_secret")),
     )
+    if cfg.get("playit_secret"):
+        status.playit_status = playit.agent_status(mgr)
     if cfg.get("tunnel_id"):
         t = cf.tunnel_status()
         status.tunnel_status = t["status"]
@@ -106,6 +122,8 @@ def _route(server_id: str, r: dict) -> Route:
         port=r.get("port") or 0,
         connect_address="127.0.0.1:25565" if tunnel else r["hostname"],
         player_command=player_command(r["hostname"]) if tunnel else "",
+        playit_address=r.get("playit_address", ""),
+        target=":".join(str(x) for x in r["target"]) if r.get("target") else "",
     )
 
 
@@ -133,9 +151,18 @@ def configure(body: ConfigUpdate, mgr: Manager):
     return _status(mgr)
 
 
+@router.put("/playit", response_model=CloudflareStatus)
+def save_playit_key(body: PlayitKeyUpdate, mgr: Manager):
+    """Run the app's playit.gg agent with this secret key (empty removes it)."""
+    _call(get_cloudflare().save_playit_key, body.secret_key, mgr)
+    return _status(mgr)
+
+
 @router.post("/sync", response_model=CloudflareStatus)
 def sync(mgr: Manager):
     cf = get_cloudflare()
+    if cf.config().get("playit_secret"):
+        _call(playit.ensure_agent, mgr, cf.config()["playit_secret"])
     if cf.is_ready():
         _cf_call(_call, cf.ensure_connector, mgr)
         ports = {s.id: s.port for s in _call(mgr.list_servers)}
@@ -157,7 +184,7 @@ def list_routes():
 def set_route(server_id: str, body: RouteUpdate, mgr: Manager):
     info = _call(mgr.get_server, server_id)
     cf = get_cloudflare()
-    r = _cf_call(cf.add_route, server_id, info.port, body.subdomain, body.mode or "")
+    r = _cf_call(cf.add_route, server_id, info.port, body.subdomain, body.mode or "", body.playit_address)
     return _route(server_id, r)
 
 
@@ -173,7 +200,9 @@ def delete_route(server_id: str):
 def on_server_created(server_id: str, port: int) -> None:
     """Give a new server a public address if the user turned that on. Never fails the create."""
     cf = get_cloudflare()
-    if not (cf.is_ready() and cf.config().get("auto_route")):
+    cfg = cf.config()
+    # playit tunnels are made by hand in the playit dashboard, so there's no address to use yet.
+    if not (cf.is_ready() and cfg.get("auto_route")) or cfg.get("default_mode") == "playit":
         return
     try:
         cf.add_route(server_id, port)

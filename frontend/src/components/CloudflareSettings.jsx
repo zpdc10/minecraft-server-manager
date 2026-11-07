@@ -10,6 +10,8 @@ const TUNNEL_STATUS = {
 };
 
 export const MODE_HELP = {
+  playit:
+    "playit.gg: free for up to 4 servers. Players type the address into Minecraft with nothing to install, nothing is opened on your router, and your home IP stays hidden. You make each server's tunnel once in the playit dashboard.",
   tunnel:
     "Tunnel: nothing to open on your router and your home IP stays hidden. Each player installs cloudflared and runs one command before connecting, because Cloudflare only passes Minecraft's raw connection to clients that run it (unless you pay for Cloudflare Spectrum).",
   direct:
@@ -182,6 +184,7 @@ export default function CloudflareSettings() {
             <select value={mode} onChange={(e) => setMode(e.target.value)}>
               <option value="tunnel">Tunnel (no port forwarding, players run cloudflared)</option>
               <option value="direct">Direct (port forwarding, players need nothing)</option>
+              <option value="playit">playit.gg (free, players need nothing, up to 4 servers)</option>
             </select>
           </label>
           <p className="muted small">{MODE_HELP[mode]}</p>
@@ -211,6 +214,69 @@ export default function CloudflareSettings() {
         </form>
       )}
       {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
+      {status?.token_set && <PlayitAgent status={status} onStatus={setStatus} />}
     </section>
+  );
+}
+
+function PlayitAgent({ status, onStatus }) {
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  async function save(value) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      onStatus(await api.savePlayitKey(value));
+      setKey("");
+      setMessage({ error: false, text: value ? "playit agent is running." : "playit agent removed." });
+    } catch (e) {
+      setMessage({ error: true, text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <h3>playit.gg agent</h3>
+      <p className="muted">
+        Lets players join with nothing installed, free for up to 4 servers. Make a free account at{" "}
+        <a href="https://playit.gg" target="_blank" rel="noreferrer">
+          playit.gg
+        </a>
+        , go to Agents, add a Docker agent and paste its secret key here. The app runs it as the{" "}
+        <code>mcsm_playit</code> container.
+      </p>
+      <p>
+        Agent:{" "}
+        <strong>{status.playit_key_set ? status.playit_status : "not set up"}</strong>
+      </p>
+      <form
+        className="key-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save(key.trim());
+        }}
+      >
+        <input
+          type="password"
+          autoComplete="off"
+          placeholder={status.playit_key_set ? "Paste a new secret key to replace it" : "playit secret key"}
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+        />
+        <button className="primary" type="submit" disabled={busy || !key.trim()}>
+          Save key
+        </button>
+        {status.playit_key_set && (
+          <button type="button" disabled={busy} onClick={() => save("")}>
+            Remove agent
+          </button>
+        )}
+      </form>
+      {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
+    </>
   );
 }
