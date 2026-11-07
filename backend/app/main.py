@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import APP_VERSION, settings
 from .providers import ProviderError
-from .routers import backups, custom_packs, mod_db, search, servers, similar
+from .routers import backups, custom_packs, mod_db, search, server_admin, servers, similar
 from .routers import settings as settings_router
 
 
@@ -31,6 +31,7 @@ app = FastAPI(title="Minecraft Server Manager", version=APP_VERSION, lifespan=li
 app.include_router(search.router)
 app.include_router(settings_router.router)
 app.include_router(servers.router)
+app.include_router(server_admin.router)
 app.include_router(mod_db.router)
 app.include_router(custom_packs.router)
 app.include_router(similar.router)

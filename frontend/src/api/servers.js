@@ -46,3 +46,27 @@ export const deleteBackup = (id, backupId) =>
   request(`${backups(id)}/${encodeURIComponent(backupId)}`, { method: "DELETE" });
 export const backupDownloadUrl = (id, backupId) =>
   `/api/servers${backups(id)}/${encodeURIComponent(backupId)}/download`;
+
+// ---- Management tools (console, players, properties, settings, stats, mods) ----
+const sid = (id) => `/${encodeURIComponent(id)}`;
+const json = (method, body) => ({ method, body: JSON.stringify(body) });
+export const sendCommand = (id, command) => request(`${sid(id)}/console`, json("POST", { command }));
+export const getPlayers = (id) => request(`${sid(id)}/players`);
+export const playerAction = (id, action, name, reason = "") =>
+  request(`${sid(id)}/players`, json("POST", { action, name, reason }));
+export const setWhitelist = (id, enabled) => request(`${sid(id)}/whitelist`, json("PUT", { enabled }));
+export const getProperties = (id) => request(`${sid(id)}/properties`);
+export const saveProperties = (id, properties, restart = false) =>
+  request(`${sid(id)}/properties`, json("PUT", { properties, restart }));
+export const updateSettings = (id, settings) => request(`${sid(id)}/settings`, json("PATCH", settings));
+export const getStats = (id) => request(`${sid(id)}/stats`);
+export const listMods = (id) => request(`${sid(id)}/mods`);
+export const uploadMod = (id, file) =>
+  request(`${sid(id)}/mods?filename=${encodeURIComponent(file.name)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/java-archive" },
+    body: file,
+  });
+export const setModEnabled = (id, file, enabled) =>
+  request(`${sid(id)}/mods/${encodeURIComponent(file)}/${enabled ? "enable" : "disable"}`, { method: "POST" });
+export const deleteMod = (id, file) => request(`${sid(id)}/mods/${encodeURIComponent(file)}`, { method: "DELETE" });
