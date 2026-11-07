@@ -292,7 +292,7 @@ class SimilarIndex:
         error = None
         if mrpack:
             try:
-                raw = await read_member(client, mrpack["url"], "modrinth.index.json")
+                raw = await read_member(client, mrpack["url"], "modrinth.index.json", mrpack.get("size"))
                 if raw:
                     mods |= mod_ids_from_index(json.loads(raw))
             except (RemoteZipError, httpx.HTTPError, ValueError) as exc:
@@ -316,7 +316,12 @@ class SimilarIndex:
             hits = data.get("hits", [])
             if not hits:
                 # The id may be a slug; resolve it.
-                project = await self._api(client, f"/project/{pack_id}")
+                try:
+                    project = await self._api(client, f"/project/{pack_id}")
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 404:
+                        return None
+                    raise
                 return await self.ensure_pack(project["id"]) if project.get("id") != pack_id else None
             hit = hits[0]
             pack = _to_modpack(hit)

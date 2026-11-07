@@ -41,10 +41,12 @@ def range_responder(data: bytes, calls: list):
             return httpx.Response(200, content=data)
         start, end = m.groups()
         if start == "":
-            chunk = data[-int(end) :]
-        else:
-            chunk = data[int(start) : (int(end) + 1 if end else None)]
-        return httpx.Response(206, content=chunk)
+            # Like Modrinth's CDN, which rejects suffix ranges.
+            return httpx.Response(501, text="Unsupported client range")
+        stop = min(int(end) + 1, len(data)) if end else len(data)
+        return httpx.Response(
+            206, content=data[int(start) : stop], headers={"Content-Range": f"bytes {start}-{stop - 1}/{len(data)}"}
+        )
 
     return respond
 
@@ -74,20 +76,22 @@ def test_mod_ids_from_index():
     assert mod_ids_from_index(index) == {"AAAAAAAA", "BBBBBBBB"}
 
 
+@pytest.mark.parametrize("known_size", [True, False])
 @respx.mock
-def test_read_member_uses_ranges_on_large_archive():
+def test_read_member_uses_ranges_on_large_archive(known_size):
     data = make_zip({"modrinth.index.json": mr_index("AAAAAAAA")}, pad=400_000)
     calls: list = []
     respx.get("https://cdn.example/pack.mrpack").mock(side_effect=range_responder(data, calls))
+    size = len(data) if known_size else None
 
     async def run():
         async with httpx.AsyncClient() as client:
-            return await read_member(client, "https://cdn.example/pack.mrpack", "modrinth.index.json")
+            return await read_member(client, "https://cdn.example/pack.mrpack", "modrinth.index.json", size)
 
     raw = asyncio.run(run())
     assert json.loads(raw)["files"][0]["path"] == "mods/AAAAAAAA.jar"
-    assert all(c.startswith("bytes=") for c in calls)
-    assert len(calls) <= 4
+    assert all(re.fullmatch(r"bytes=\d+-\d+", c) for c in calls)
+    assert len(calls) <= (3 if known_size else 4)
 
 
 @respx.mock
@@ -224,6 +228,15 @@ def test_similar_endpoint_indexes_and_ranks(isolated_index):
     shared = body["results"][0]
     assert shared["shared_count"] == 2
     assert {m["title"] for m in shared["shared_mods"]} == {"Mod MODAAAAA", "Mod MODBBBBB"}
+
+
+@respx.mock
+def test_similar_unknown_pack_is_404(isolated_index, monkeypatch):
+    monkeypatch.setattr(isolated_index, "needs_refresh", lambda: False)
+    respx.get(f"{API}/search").mock(return_value=httpx.Response(200, json={"hits": [], "total_hits": 0}))
+    respx.get(f"{API}/project/no-such-pack").mock(return_value=httpx.Response(404))
+    resp = TestClient(app).get("/api/similar/modrinth/no-such-pack")
+    assert resp.status_code == 404
 
 
 def test_similar_rejects_curseforge():

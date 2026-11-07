@@ -25,9 +25,10 @@ class RemoteZipError(Exception):
     pass
 
 
-async def _range(client: httpx.AsyncClient, url: str, header: str) -> tuple[bytes, bool]:
-    """GET with a Range header. Returns (body, was_partial)."""
-    async with client.stream("GET", url, headers={"Range": header}) as resp:
+async def _get(client: httpx.AsyncClient, url: str, header: str | None) -> tuple[bytes, bool]:
+    """GET, optionally with a Range header. Returns (body, was_partial)."""
+    headers = {"Range": header} if header else None
+    async with client.stream("GET", url, headers=headers) as resp:
         resp.raise_for_status()
         partial = resp.status_code == 206
         chunks, size = [], 0
@@ -37,6 +38,10 @@ async def _range(client: httpx.AsyncClient, url: str, header: str) -> tuple[byte
                 raise RemoteZipError("archive is too large to download")
             chunks.append(chunk)
         return b"".join(chunks), partial
+
+
+async def _range(client: httpx.AsyncClient, url: str, start: int, end: int) -> tuple[bytes, bool]:
+    return await _get(client, url, f"bytes={start}-{end}")
 
 
 def _from_full(data: bytes, name: str) -> bytes | None:
@@ -78,9 +83,25 @@ def _decompress(method: int, data: bytes, usize: int) -> bytes:
     raise RemoteZipError(f"unsupported compression method {method}")
 
 
-async def read_member(client: httpx.AsyncClient, url: str, name: str) -> bytes | None:
-    """Return the bytes of `name` inside the zip at `url`, or None if it isn't there."""
-    tail, partial = await _range(client, url, f"bytes=-{TAIL_BYTES}")
+async def read_member(client: httpx.AsyncClient, url: str, name: str, size: int | None = None) -> bytes | None:
+    """Return the bytes of `name` inside the zip at `url`, or None if it isn't there.
+
+    `size` is the archive's length in bytes, if known. Only explicit `start-end` ranges
+    are sent: Modrinth's CDN rejects suffix ranges (`bytes=-N`) with 501.
+    """
+    try:
+        if not size:
+            # Learn the size from a one-byte range: "Content-Range: bytes 0-0/<size>".
+            async with client.stream("GET", url, headers={"Range": "bytes=0-0"}) as resp:
+                resp.raise_for_status()
+                total = resp.headers.get("Content-Range", "").rpartition("/")[2]
+                if resp.status_code != 206 or not total.isdigit():
+                    raise RemoteZipError("server does not support ranges")
+                size = int(total)
+        start = max(0, size - TAIL_BYTES)
+        tail, partial = await _range(client, url, start, size - 1)
+    except (RemoteZipError, httpx.HTTPStatusError):
+        tail, partial = await _get(client, url, None)
     if not partial:
         return _from_full(tail, name)
 
@@ -93,13 +114,12 @@ async def read_member(client: httpx.AsyncClient, url: str, name: str) -> bytes |
 
     # The tail usually contains the whole central directory already.
     # Work out where the tail starts in the file: it ends right after EOCD + comment.
-    eocd_offset_in_file = cd_offset + cd_size  # EOCD directly follows the central directory
-    tail_start = eocd_offset_in_file - eocd
-    if tail_start <= cd_offset:
+    tail_start = start
+    if tail_start <= cd_offset and cd_offset + cd_size <= tail_start + len(tail):
         start = cd_offset - tail_start
         cdir = tail[start : start + cd_size]
     else:
-        cdir, _ = await _range(client, url, f"bytes={cd_offset}-{cd_offset + cd_size - 1}")
+        cdir, _ = await _range(client, url, cd_offset, cd_offset + cd_size - 1)
 
     entry = _find_entry(cdir, name)
     if entry is None:
@@ -108,12 +128,12 @@ async def read_member(client: httpx.AsyncClient, url: str, name: str) -> bytes |
 
     # Local header is 30 bytes + name + extra; the extra length can differ from the
     # central directory's, so read the header first, then the data.
-    header, _ = await _range(client, url, f"bytes={offset}-{offset + 29}")
+    header, _ = await _range(client, url, offset, offset + 29)
     if header[:4] != LOCAL_SIG:
         raise RemoteZipError("bad local file header")
     nlen, elen = struct.unpack_from("<HH", header, 26)
     data_start = offset + 30 + nlen + elen
     if csize == 0:
         return _decompress(method, b"", usize)
-    data, _ = await _range(client, url, f"bytes={data_start}-{data_start + csize - 1}")
+    data, _ = await _range(client, url, data_start, data_start + csize - 1)
     return _decompress(method, data, usize)
