@@ -104,6 +104,71 @@ export default function Settings() {
         </form>
         {message && <p className={message.error ? "error" : "ok"}>{message.text}</p>}
       </section>
+      <KnownMods />
     </div>
+  );
+}
+
+const DB_SOURCES = {
+  remote: "up to date from GitHub",
+  cache: "last copy downloaded from GitHub",
+  bundled: "the copy built into this app",
+};
+
+function KnownMods() {
+  const [db, setDb] = useState(null);
+  const [error, setError] = useState("");
+
+  const load = () =>
+    api
+      .modDb()
+      .then(setDb)
+      .catch((e) => setError(e.message));
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function forget(id) {
+    try {
+      await api.forgetLearnedMod(id);
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <h2>Client-only and problem mods</h2>
+      <p className="muted">
+        When building a server from a modpack, the app removes mods on this list before the first test start, and
+        removes any mod that crashes the server while testing.
+      </p>
+      {error && <p className="error">{error}</p>}
+      {db && (
+        <>
+          <p>
+            Shared list: <strong>{db.shared_count} entries</strong> ({DB_SOURCES[db.source] ?? db.source})
+          </p>
+          <h3>Learned on this server ({db.learned.length})</h3>
+          {db.learned.length === 0 ? (
+            <p className="muted">Nothing yet. Mods that crash a server because they are client-only show up here.</p>
+          ) : (
+            <ul className="learned">
+              {db.learned.map((m) => (
+                <li key={m.ids.join(",")}>
+                  <strong>{m.name || m.ids[0]}</strong> <code>{m.ids.join(", ")}</code>
+                  {m.pack && <span className="muted"> · found in {m.pack}</span>}
+                  {m.count > 1 && <span className="muted"> · {m.count} times</span>}{" "}
+                  <button type="button" onClick={() => forget(m.ids[0])}>
+                    Forget
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
   );
 }

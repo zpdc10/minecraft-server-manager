@@ -9,6 +9,7 @@ Servers run on the [`itzg/minecraft-server`](https://github.com/itzg/docker-mine
 - [x] Modrinth modpack search with version, loader and category filters
 - [x] Create and manage servers (port, RAM, Java version, start/stop/restart/delete, logs)
 - [x] CurseForge search and installs (needs an API key, set in Settings or via `CF_API_KEY`)
+- [x] Build servers from client-only packs: install, test-start, and remove client-only or crashing mods automatically
 - [ ] Console, backups, whitelist, remote access
 
 ## Install on Unraid
@@ -29,6 +30,37 @@ message pointing to Settings and Modrinth keeps working.
 Some CurseForge packs have mods whose authors block third-party downloads. The itzg server image then can't fetch
 those mods automatically and will list the files it needs you to download by hand.
 
+## Building servers from client packs
+
+Many packs have no server download, or ship client-only mods that crash a dedicated server. When
+"Test and fix automatically" is ticked (the default for modpacks, and always on for packs marked client-only),
+the app builds the server in steps:
+
+1. **Install.** The itzg container runs once with `SETUP_ONLY=true` to download the pack, loader and mods.
+   itzg already skips files a Modrinth pack marks as not needed on servers, and applies its own exclude lists.
+2. **Scan.** Every jar in `mods/` is opened. Jars whose metadata says they only run on the client
+   (`"environment": "client"` in fabric.mod.json, `clientSideOnly=true` in mods.toml), and jars on the
+   known-mods list, are set aside.
+3. **Test.** The server is started with auto-restart off and the log is watched for `Done (...)! For help`.
+   If it crashes, the log and new crash reports are read to find the mod responsible: a mod loading client
+   classes on the server, a mod missing a dependency (often one removed in an earlier step), a mod the loader
+   reports as failed, a broken mixin, or the first mod in the crash's stack trace. That mod is set aside and
+   the server is tried again, up to `BUILD_MAX_ATTEMPTS` times. If the mods need a newer Java, the image is
+   switched instead. Out-of-memory and port-in-use errors stop the build with a message.
+
+Removed jars are moved to `.mcsm/removed-mods/` in the server folder, so they can be put back by hand, and are
+passed to itzg as excluded / ignored files so later restarts don't download them again. The Servers page lists
+each removed mod and why. The full report is in `.mcsm/build.json` and at `GET /api/servers/<id>/build`.
+
+### Known client-only mods list
+
+`backend/app/data/known-mods.json` is a shared list of mods known to be client-only or to break servers,
+seeded from itzg's exclude lists. The app downloads the latest copy from `MOD_DB_URL` (this repo on GitHub)
+every few hours and falls back to the copy built into the image. Mods a build removes for loading client-only
+code are also remembered on that install (`learned-mods.json` in `DATA_DIR`) and removed up front from later
+builds; they are listed on the Settings page, where they can be forgotten. Copy entries from there into
+`known-mods.json` to share them with every install.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -39,6 +71,10 @@ those mods automatically and will list the files it needs you to download by han
 | `HOST_DATA_ROOT` | auto-detected | The same folder as a host path, used for the server containers' bind mounts |
 | `DOCKER_NETWORK` | (empty) | Docker network to attach server containers to |
 | `MC_UID` / `MC_GID` | `99` / `100` | User and group the Minecraft servers run as (Unraid's nobody:users) |
+| `MOD_DB_URL` | this repo's `known-mods.json` on GitHub | Shared client-only mods list. Empty uses only the copy in the image |
+| `BUILD_MAX_ATTEMPTS` | `10` | Test starts the server builder tries before giving up |
+| `BUILD_MAX_REMOVALS` | `15` | Most mods the builder removes for crashes in one build |
+| `BUILD_INSTALL_TIMEOUT` / `BUILD_START_TIMEOUT` | `3600` / `1200` | Seconds to wait for the pack install / for the server to start |
 | `MODRINTH_API_URL` | `https://api.modrinth.com/v2` | Override the Modrinth API base URL |
 
 ## How servers work
@@ -62,7 +98,9 @@ backend/app/
   models/            shared data models (modpack.py, ...)
   providers/         modpack sources; each implements providers/base.py
   routers/           API endpoints (search.py, servers.py, ...)
-  services/          docker_manager.py (server containers), itzg_env.py (image env vars)
+  services/          docker_manager.py (server containers), itzg_env.py (image env vars),
+                     server_builder.py (install/test/fix loop), crash_analyzer.py, mod_scan.py, mod_db.py
+  data/known-mods.json  shared list of client-only mods
 backend/tests/       pytest suite (HTTP mocked with respx)
 frontend/src/
   api.js             API client

@@ -239,6 +239,12 @@ class ServerBuilder:
                 build.message = f"Server started on attempt {attempt}" + (
                     f" after removing {n} mod{'s' if n != 1 else ''}." if n else "."
                 )
+                if n and not scan_mods(self.mgr.mods_dir(sid)):
+                    loader = (info.loader or "modded").capitalize()
+                    build.message += (
+                        f" Every mod in this pack is client-side, so this is a plain {loader} server "
+                        "that players with the pack can join."
+                    )
                 self.mgr.finish_build(sid, build)
                 return
 

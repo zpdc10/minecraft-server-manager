@@ -30,4 +30,5 @@ export const stopServer = (id) => request(`/${encodeURIComponent(id)}/stop`, { m
 export const restartServer = (id) => request(`/${encodeURIComponent(id)}/restart`, { method: "POST" });
 export const deleteServer = (id, deleteData = false) =>
   request(`/${encodeURIComponent(id)}?delete_data=${deleteData}`, { method: "DELETE" });
+export const getBuild = (id) => request(`/${encodeURIComponent(id)}/build`);
 export const getLogs = (id, tail = 300) => request(`/${encodeURIComponent(id)}/logs?tail=${tail}`);

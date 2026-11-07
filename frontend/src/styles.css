@@ -122,3 +122,5 @@ main { padding: 20px; max-width: 1400px; margin: 0 auto; }
 .panel a { color: var(--accent); }
 .tag.warn { background: #f0ad4e33; color: #b36b00; }
 @media (prefers-color-scheme: dark) { .tag.warn { color: #f0ad4e; } }
+.learned { padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.settings .panel + .panel { margin-top: 16px; }

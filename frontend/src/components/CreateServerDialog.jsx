@@ -22,7 +22,8 @@ function nextFreePort(servers) {
  *
  * Props: open, onClose(), onCreated(server), and the pack being installed:
  * source ("modrinth" | "curseforge" | "vanilla"), projectId, projectSlug,
- * versionId, title, minecraftVersion, loader.
+ * versionId, title, minecraftVersion, loader, and clientOnly (the pack has no
+ * server version, so the server builder must strip client mods).
  */
 export default function CreateServerDialog({
   open,
@@ -35,12 +36,14 @@ export default function CreateServerDialog({
   title = "",
   minecraftVersion = "",
   loader = "",
+  clientOnly = false,
 }) {
   const [name, setName] = useState(title);
   const [port, setPort] = useState(25565);
   const [memory, setMemory] = useState(source === "vanilla" ? 2 : 6);
   const [java, setJava] = useState("");
   const [mcVersion, setMcVersion] = useState(minecraftVersion);
+  const [autoFix, setAutoFix] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -50,6 +53,7 @@ export default function CreateServerDialog({
     setMcVersion(minecraftVersion);
     setMemory(source === "vanilla" ? 2 : 6);
     setJava("");
+    setAutoFix(true);
     setError("");
     listServers()
       .then((servers) => setPort(nextFreePort(servers)))
@@ -75,6 +79,7 @@ export default function CreateServerDialog({
         port: Number(port),
         memory_gb: Number(memory),
         java_version: java || null,
+        auto_fix: source !== "vanilla" && (autoFix || clientOnly),
       });
       onCreated?.(server);
       onClose?.();
@@ -88,7 +93,7 @@ export default function CreateServerDialog({
   return (
     <div className="mcsm-backdrop" onClick={onClose}>
       <form className="mcsm-dialog" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <h2>Create server</h2>
+        <h2>{clientOnly ? "Build server" : "Create server"}</h2>
         {source !== "vanilla" && (
           <p className="mcsm-muted">
             {title || projectSlug || projectId} from {source === "curseforge" ? "CurseForge" : "Modrinth"}
@@ -131,6 +136,22 @@ export default function CreateServerDialog({
           </select>
         </label>
 
+        {source !== "vanilla" && (
+          <label className="mcsm-check">
+            <input
+              type="checkbox"
+              checked={autoFix || clientOnly}
+              disabled={clientOnly}
+              onChange={(e) => setAutoFix(e.target.checked)}
+            />
+            <span>
+              Test and fix automatically: install the pack, remove client-only mods, test-start the server, and remove
+              any mod that crashes it until it starts.
+              {clientOnly && " Needed for this pack, because it is made for the client."}
+            </span>
+          </label>
+        )}
+
         <p className="mcsm-muted mcsm-small">
           Players connect to <code>{window.location.hostname}:{port}</code>. The first start downloads the pack, which
           can take several minutes.
@@ -143,7 +164,7 @@ export default function CreateServerDialog({
             Cancel
           </button>
           <button type="submit" className="mcsm-primary" disabled={busy}>
-            {busy ? "Creating..." : "Create server"}
+            {busy ? "Creating..." : clientOnly ? "Build server" : "Create server"}
           </button>
         </div>
       </form>

@@ -182,6 +182,7 @@ export default function Search({ onCreate, onOpenSettings }) {
               title: picking.title,
               minecraftVersion: version.game_versions?.[0] || "",
               loader: version.loaders?.[0] || "",
+              clientOnly: picking.server_supported === false,
             });
           }}
         />
