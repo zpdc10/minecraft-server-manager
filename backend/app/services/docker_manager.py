@@ -142,7 +142,8 @@ class DockerManager:
         if status == "running":
             return ("running" if health in (None, "healthy") else "starting"), ""
         if status == "created":
-            return "creating", ""
+            # Created but never started: a stopped server whose settings were changed.
+            return "stopped", ""
         if status == "restarting":
             return "error", "Server keeps crashing and restarting. Check the logs."
         if status == "removing":

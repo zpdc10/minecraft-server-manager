@@ -8,6 +8,7 @@ import {
   stopServer,
 } from "../api/servers.js";
 import CreateServerDialog from "../components/CreateServerDialog.jsx";
+import ServerManage from "../components/ServerManage.jsx";
 import "../components/servers.css";
 
 const STATUS_LABELS = {
@@ -152,6 +153,7 @@ export default function Servers() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [logsFor, setLogsFor] = useState(null);
+  const [manageId, setManageId] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [creatingVanilla, setCreatingVanilla] = useState(false);
 
@@ -235,6 +237,11 @@ export default function Servers() {
                     </button>
                   </>
                 )}
+                {!settingUp && (
+                  <button className="mcsm-primary" onClick={() => setManageId(s.id)}>
+                    Manage
+                  </button>
+                )}
                 <button onClick={() => setLogsFor(s)}>Logs</button>
                 <button className="mcsm-danger" disabled={busy} onClick={() => setDeleting(s)}>
                   Delete
@@ -245,6 +252,13 @@ export default function Servers() {
         })}
       </div>
 
+      {manageId && servers?.some((s) => s.id === manageId) && (
+        <ServerManage
+          server={servers.find((s) => s.id === manageId)}
+          onClose={() => setManageId(null)}
+          onChanged={refresh}
+        />
+      )}
       {logsFor && <LogsPanel server={logsFor} onClose={() => setLogsFor(null)} />}
       {deleting && <DeleteDialog server={deleting} onClose={() => setDeleting(null)} onDeleted={refresh} />}
       <CreateServerDialog

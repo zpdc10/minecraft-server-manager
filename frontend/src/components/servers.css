@@ -44,3 +44,54 @@
 .mcsm-build { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
 .mcsm-build summary { cursor: pointer; }
 .mcsm-removed { margin: 6px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+
+/* ---- Manage dialog (console, players, properties, mods, settings) ---- */
+.mcsm-manage { max-width: 980px; height: min(860px, calc(100vh - 32px)); }
+.mcsm-stats { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+.mcsm-meter-wrap { display: inline-flex; align-items: center; gap: 6px; }
+.mcsm-meter { display: inline-block; width: 90px; height: 6px; border-radius: 3px; background: #8884; overflow: hidden; }
+.mcsm-meter span { display: block; height: 100%; background: var(--accent); }
+.mcsm-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.mcsm-tabs .tab { padding: 8px 12px; border-radius: 0; border-bottom: 2px solid transparent; }
+.mcsm-tabs .tab.active { border-bottom-color: var(--accent); }
+.mcsm-tab-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.mcsm-console { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.mcsm-console pre {
+  margin: 0; background: #000; color: #ddd; padding: 12px; border-radius: 8px; font-size: 12px;
+  flex: 1; min-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+}
+.mcsm-console-input { display: flex; gap: 8px; align-items: center; font-family: monospace; }
+.mcsm-console-input input { flex: 1; font-family: monospace; }
+.mcsm-replies { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow: auto; }
+.mcsm-manage input:not([type="checkbox"]), .mcsm-manage select {
+  padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit;
+}
+.mcsm-section { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.mcsm-section h3 { margin: 0; font-size: 1rem; }
+.mcsm-section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mcsm-section-head label.mcsm-check { flex: 0 1 auto; flex-direction: row; align-items: center; gap: 6px; }
+.mcsm-section-head label.mcsm-check input { padding: 0; margin: 0; }
+.mcsm-inline-form { display: flex; gap: 8px; flex: 1; }
+.mcsm-inline-form input { flex: 1; min-width: 0; }
+.mcsm-plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.mcsm-plist li {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.mcsm-plist li .mcsm-badge { margin-left: 6px; }
+.mcsm-plist-actions { display: flex; gap: 6px; }
+.mcsm-plist-actions button { padding: 3px 10px; font-size: 0.85rem; }
+.mcsm-disabled code { opacity: 0.55; text-decoration: line-through; }
+.mcsm-props, .mcsm-mods { display: flex; flex-direction: column; gap: 10px; }
+.mcsm-props-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; background: var(--panel); padding: 2px 0 6px; z-index: 1; }
+.mcsm-props-head input { flex: 1; min-width: 140px; }
+.mcsm-props-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px 16px; }
+.mcsm-props-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; }
+.mcsm-props-grid label.mcsm-changed code { color: var(--accent); font-weight: 600; }
+.mcsm-props-grid input:disabled, .mcsm-props-grid select:disabled { opacity: 0.6; }
+.mcsm-settings { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+.mcsm-settings label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; flex: 1; }
+@media (max-width: 600px) {
+  .mcsm-row { flex-direction: column; }
+  .mcsm-manage { padding: 14px; }
+}
