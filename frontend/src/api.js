@@ -4,7 +4,15 @@ async function get(path, params = {}) {
     Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ""),
   );
   const url = qs.toString() ? `${path}?${qs}` : path;
-  const resp = await fetch(url);
+  return send(url);
+}
+
+async function send(url, method = "GET", body) {
+  const resp = await fetch(url, {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (!resp.ok) {
     let detail = resp.statusText;
     try {
@@ -22,4 +30,7 @@ export const api = {
   filters: (source) => get("/api/filters", { source }),
   search: (params) => get("/api/search", params),
   versions: (source, projectId) => get(`/api/packs/${source}/${encodeURIComponent(projectId)}/versions`),
+  settings: () => get("/api/settings"),
+  saveCurseForgeKey: (apiKey) => send("/api/settings/curseforge", "PUT", { api_key: apiKey }),
+  testCurseForgeKey: () => send("/api/settings/curseforge/test", "POST"),
 };

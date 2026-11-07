@@ -12,7 +12,7 @@ const SORTS = [
 ];
 const PAGE_SIZE = 24;
 
-export default function Search({ onCreate }) {
+export default function Search({ onCreate, onOpenSettings }) {
   const [sources, setSources] = useState(["modrinth"]);
   const [source, setSource] = useState("modrinth");
   const [options, setOptions] = useState({ game_versions: [], loaders: [], categories: [] });
@@ -138,6 +138,14 @@ export default function Search({ onCreate }) {
         <p className="count">
           {loading ? "Searching…" : `${result.total.toLocaleString()} modpacks`}
           {error && <span className="error"> · {error}</span>}
+          {error && source === "curseforge" && onOpenSettings && (
+            <>
+              {" "}
+              <button className="link" onClick={onOpenSettings}>
+                Open Settings
+              </button>
+            </>
+          )}
         </p>
         <div className="grid">
           {result.hits.map((pack) => (
