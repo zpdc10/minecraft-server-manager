@@ -24,8 +24,9 @@ def _client() -> httpx.AsyncClient:
 
 
 def build_facets(game_version: str | None, loader: str | None, category: str | None) -> str:
-    # Facets are AND-ed lists of OR-ed strings.
-    facets = [["project_type:modpack"], ["server_side!=unsupported"]]
+    # Facets are AND-ed lists of OR-ed strings. Client-only packs are kept so a
+    # search by name still finds them; they're flagged with server_supported=False.
+    facets = [["project_type:modpack"]]
     if game_version:
         facets.append([f"versions:{game_version}"])
     if loader:
@@ -54,6 +55,7 @@ def _to_modpack(hit: dict) -> Modpack:
         game_versions=hit.get("versions", []),
         updated=hit.get("date_modified"),
         url=f"https://modrinth.com/modpack/{hit['slug']}",
+        server_supported=hit.get("server_side") != "unsupported",
     )
 
 

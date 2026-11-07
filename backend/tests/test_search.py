@@ -30,7 +30,7 @@ HIT = {
 def test_build_facets():
     facets = json.loads(build_facets("1.20.1", "fabric", "adventure"))
     assert ["project_type:modpack"] in facets
-    assert ["server_side!=unsupported"] in facets
+    assert not any("server_side" in f[0] for f in facets)
     assert ["versions:1.20.1"] in facets
     assert ["categories:fabric"] in facets
     assert ["categories:adventure"] in facets
@@ -51,6 +51,7 @@ def test_search_normalizes_hits():
     assert pack["categories"] == ["adventure", "quests"]
     assert pack["icon_url"] is None
     assert pack["url"] == "https://modrinth.com/modpack/cool-pack"
+    assert pack["server_supported"] is True
     sent = route.calls.last.request
     assert sent.headers["User-Agent"].startswith("zpdc10/minecraft-server-manager")
     assert "versions%3A1.20.1" in str(sent.url)
@@ -125,3 +126,13 @@ def test_versions():
     body = client.get("/api/packs/modrinth/abc123/versions").json()
     assert body[0]["id"] == "v1"
     assert body[0]["loaders"] == ["fabric"]
+
+
+@respx.mock
+def test_client_only_pack_is_flagged():
+    client_only = {**HIT, "project_id": "fo", "slug": "fabulously-optimized", "server_side": "unsupported"}
+    respx.get(f"{API}/search").mock(
+        return_value=httpx.Response(200, json={"hits": [client_only], "offset": 0, "limit": 20, "total_hits": 1})
+    )
+    pack = client.get("/api/search", params={"q": "fabulously optimized"}).json()["hits"][0]
+    assert pack["server_supported"] is False
