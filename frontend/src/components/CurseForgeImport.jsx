@@ -108,14 +108,14 @@ export default function CurseForgeImport({ onClose, onCreate }) {
       <div className="mcsm-dialog mcsm-import" onClick={(e) => e.stopPropagation()}>
         <h2>Import from CurseForge</h2>
         <p className="mcsm-muted mcsm-small">
-          Paste a modpack's CurseForge page link. No API key needed: the pack and its mods come from CurseForge's
+          Paste a modpack's CurseForge page link, or its Project ID (shown under About Project on the pack page). No API key needed: the pack and its mods come from CurseForge's
           public download servers.
         </p>
         <form className="mcsm-import-link" onSubmit={lookUp}>
           <input
             value={link}
             onChange={(e) => setLink(e.target.value)}
-            placeholder="https://www.curseforge.com/minecraft/modpacks/…"
+            placeholder="CurseForge pack link or Project ID"
             autoFocus
           />
           <button type="submit" className="mcsm-primary" disabled={!link.trim() || !!busy}>

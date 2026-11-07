@@ -33,7 +33,9 @@ def data_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
-def pack_zip(files=((100, 1001), (200, 2002), (300, 3003), (400, 4004)), loader="forge-47.3.0", extra=None) -> bytes:
+def pack_zip(
+    files=((100, 1001), (200, 2002), (300, 3003), (400, 4004), (500, 5005)), loader="forge-47.3.0", extra=None
+) -> bytes:
     manifest = {
         "minecraft": {"version": "1.20.1", "modLoaders": [{"id": loader, "primary": True}]},
         "manifestType": "minecraftModpack",
@@ -140,7 +142,9 @@ def test_preview_queued_and_missing():
         mock.get(f"{WIDGET}/minecraft/modpacks/new-pack").respond(202, json={"title": "In queue"})
         mock.get(f"{WIDGET}/minecraft/modpacks/gone").respond(404, json={"error": "not_found"})
         assert client.post("/api/imports/curseforge/preview", json={"url": "new-pack"}).status_code == 503
-        assert client.post("/api/imports/curseforge/preview", json={"url": "gone"}).status_code == 404
+        r = client.post("/api/imports/curseforge/preview", json={"url": "gone"})
+        assert r.status_code == 404
+        assert "Project ID" in r.json()["detail"]
 
 
 # ---- manifest + env -----------------------------------------------------------------
@@ -211,6 +215,8 @@ def test_install_downloads_mods(tmp_path):
             ]
         )
         mock.get("https://cdn.modrinth.com/jei.jar").respond(content=b"jei")
+        # A resource pack in the manifest: not a mod, skipped.
+        mock.get(f"{SITE}/mods/500/files/5005").respond(json=site_file(500, 5005, "Pretty Textures.zip"))
         # A mod that can't be found anywhere.
         mock.get(f"{SITE}/mods/400/files/4004").respond(404)
         mock.get(f"{WIDGET}/400").respond(404)
@@ -224,10 +230,11 @@ def test_install_downloads_mods(tmp_path):
     assert sorted(p.name for p in (srv / "mods").iterdir()) == ["good.jar", "jei-15.jar"]
     assert (srv / "config" / "test.toml").read_text() == "a=1"
     assert not (tmp_path / "evil.txt").exists()
-    assert "Downloaded 2 of 4 mods." in notes
+    assert "Downloaded 2 of 5 mods." in notes
+    assert any("resource packs" in n for n in notes)
     assert any("Modrinth" in n for n in notes)
     assert any("project 400" in n for n in notes)
-    assert steps[-1] == "Downloading mods (4 of 4)"
+    assert steps[-1] == "Downloading mods (5 of 5)"
     # The downloaded pack zip isn't kept around.
     assert not list((cf_import.imports_dir() / "cache").iterdir())
 

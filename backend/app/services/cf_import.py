@@ -142,7 +142,14 @@ async def preview(text: str) -> ImportPreview:
                 "cfwidget.com is fetching this pack for the first time. Try again in a minute.", status_code=503
             )
         if resp.status_code == 404:
-            raise ProviderError("No CurseForge modpack was found at that link.", status_code=404)
+            if link.slug:
+                # cfwidget can't find some packs by name, but always finds them by number.
+                raise ProviderError(
+                    f"cfwidget.com couldn't find '{link.slug}' by name. Paste the pack's Project ID instead: "
+                    "it's the number under About Project on the right of the pack's CurseForge page.",
+                    status_code=404,
+                )
+            raise ProviderError("No CurseForge modpack has that project ID.", status_code=404)
         if resp.status_code != 200:
             raise ProviderError(f"cfwidget.com answered {resp.status_code} for that pack.", status_code=502)
         data = resp.json()
@@ -415,7 +422,7 @@ class ModResult:
     project_id: int
     file_id: int
     file_name: str = ""
-    status: str = "ok"  # ok | client_only | modrinth | failed
+    status: str = "ok"  # ok | client_only | not_mod | modrinth | failed
     detail: str = ""
 
 
@@ -438,6 +445,10 @@ def _fetch_mod(client: httpx.Client, mods_dir: Path, spec: PackSpec, project_id:
             r.detail = "Tagged client-only on CurseForge"
             return r
         name = os.path.basename(meta.get("fileName") or "")
+        if name and not name.lower().endswith(".jar"):
+            # Packs list resource packs and shaders too; servers don't use them.
+            r.status, r.file_name, r.detail = "not_mod", name, "Resource pack or shader"
+            return r
         if name:
             r.file_name = name
             try:
@@ -572,10 +583,13 @@ def install(
     skipped = [r for r in results if r.status == "client_only"]
     swapped = [r for r in results if r.status == "modrinth"]
     failed = [r for r in results if r.status == "failed"]
-    ok = total - len(failed) - len(skipped)
+    not_mods = [r for r in results if r.status == "not_mod"]
+    ok = total - len(failed) - len(skipped) - len(not_mods)
     notes.append(f"Downloaded {ok} of {total} mods.")
     if skipped:
         notes.append(f"Skipped {len(skipped)} mods CurseForge marks as client-only.")
+    if not_mods:
+        notes.append(f"Skipped {len(not_mods)} resource packs and shaders, which servers don't use.")
     notes.extend(r.detail for r in swapped)
     notes.extend(r.detail for r in failed)
     if total and len(failed) == total:
