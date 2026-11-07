@@ -60,7 +60,9 @@ async def loader_versions(loader: str, mc: str) -> list[str]:
     if loader == "quilt":
         data = await _fetch(QUILT_META.format(mc=mc))
         versions = [d["loader"]["version"] for d in data]
-        return [v for v in versions if "beta" not in v] + [v for v in versions if "beta" in v]
+        stable = sorted((v for v in versions if "beta" not in v), key=_version_key, reverse=True)
+        beta = sorted((v for v in versions if "beta" in v), key=_version_key, reverse=True)
+        return stable + beta
     if loader == "forge":
         xml = await _fetch(FORGE_MAVEN, as_json=False)
         if not xml:

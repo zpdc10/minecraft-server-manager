@@ -361,3 +361,18 @@ def test_unknown_pack_404():
 def test_upstream_error_is_502(api):
     api.get(f"{MR}/search").mock(side_effect=httpx.ConnectError("down"))
     assert client.get("/api/mods/search").status_code == 502
+
+
+def test_quilt_versions_sorted():
+    with respx.mock() as mock:
+        mock.get("https://meta.quiltmc.org/v3/versions/loader/1.20.1").respond(
+            json=[{"loader": {"version": v}} for v in ["0.24.0", "0.23.0", "0.23.1", "0.25.0-beta.1"]]
+        )
+        import asyncio
+
+        assert asyncio.run(loader_versions.loader_versions("quilt", "1.20.1")) == [
+            "0.24.0",
+            "0.23.1",
+            "0.23.0",
+            "0.25.0-beta.1",
+        ]
