@@ -41,6 +41,19 @@ class Settings:
     # User and group the Minecraft server runs as. Unraid's appdata convention is 99:100.
     mc_uid: int = field(default_factory=lambda: int(os.environ.get("MC_UID", "99")))
     mc_gid: int = field(default_factory=lambda: int(os.environ.get("MC_GID", "100")))
+    # --- Server builder (test-start a modpack server and remove mods that break it) ---
+    # Shared list of client-only / crashing mods. Empty uses only the copy in the image.
+    mod_db_url: str = field(
+        default_factory=lambda: os.environ.get(
+            "MOD_DB_URL",
+            "https://raw.githubusercontent.com/zpdc10/minecraft-server-manager/main/backend/app/data/known-mods.json",
+        )
+    )
+    build_max_attempts: int = field(default_factory=lambda: int(os.environ.get("BUILD_MAX_ATTEMPTS", "10")))
+    # Most mods the builder may remove because of crashes in one build.
+    build_max_removals: int = field(default_factory=lambda: int(os.environ.get("BUILD_MAX_REMOVALS", "15")))
+    build_install_timeout: int = field(default_factory=lambda: int(os.environ.get("BUILD_INSTALL_TIMEOUT", "3600")))
+    build_start_timeout: int = field(default_factory=lambda: int(os.environ.get("BUILD_START_TIMEOUT", "1200")))
     static_dir: str = field(default_factory=lambda: os.environ.get("STATIC_DIR", "/app/static"))
 
 

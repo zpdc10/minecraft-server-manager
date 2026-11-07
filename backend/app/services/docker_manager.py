@@ -19,7 +19,7 @@ import docker
 from docker.errors import APIError, DockerException, ImageNotFound, NotFound
 
 from ..config import Settings
-from ..models.server import CreateServerRequest, ServerInfo
+from ..models.server import BuildInfo, CreateServerRequest, ServerInfo
 from .itzg_env import build_env, pick_java_version
 
 log = logging.getLogger(__name__)
@@ -29,6 +29,22 @@ MANAGED_LABEL = f"{LABEL_PREFIX}managed"
 MC_PORT = "25565/tcp"
 # Exit codes that mean a clean shutdown (0 = graceful, 143 = SIGTERM).
 CLEAN_EXIT_CODES = {0, 143}
+BUILD_ACTIVE_PHASES = {"installing", "scanning", "testing"}
+INFO_LABELS = (
+    "id",
+    "name",
+    "source",
+    "project_id",
+    "project_slug",
+    "version_id",
+    "pack_title",
+    "minecraft_version",
+    "loader",
+    "port",
+    "memory_gb",
+    "java_version",
+    "created_at",
+)
 
 
 class ServerNotFound(Exception):
@@ -55,6 +71,9 @@ class DockerManager:
         self._pending: dict[str, ServerInfo] = {}
         self._lock = threading.Lock()
         self._host_root: str | None = None
+        # Builds running in this process, and builds the user cancelled by deleting.
+        self._builds: dict[str, BuildInfo] = {}
+        self._cancelled: set[str] = set()
 
     # ---- helpers -----------------------------------------------------------
 
@@ -137,9 +156,63 @@ class DockerManager:
             return "stopped", ""
         return "unknown", ""
 
+    # ---- build reports ---------------------------------------------------------
+
+    def build_report_path(self, server_id: str) -> str:
+        return os.path.join(self._local_data_path(server_id), ".mcsm", "build.json")
+
+    def save_build(self, server_id: str, build: BuildInfo) -> None:
+        with self._lock:
+            self._builds[server_id] = build
+        path = self.build_report_path(server_id)
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            tmp = path + ".tmp"
+            with open(tmp, "w") as f:
+                f.write(build.model_dump_json(indent=1))
+            os.replace(tmp, path)
+        except OSError as e:
+            log.warning("Could not save build report for %s: %s", server_id, e)
+
+    def finish_build(self, server_id: str, build: BuildInfo) -> None:
+        self.save_build(server_id, build)
+        with self._lock:
+            self._builds.pop(server_id, None)
+
+    def get_build(self, server_id: str) -> BuildInfo | None:
+        with self._lock:
+            if server_id in self._builds:
+                return self._builds[server_id]
+        try:
+            with open(self.build_report_path(server_id)) as f:
+                build = BuildInfo.model_validate_json(f.read())
+        except (OSError, ValueError):
+            return None
+        if build.phase in BUILD_ACTIVE_PHASES:
+            # The build thread is gone: the app restarted in the middle of it.
+            build = build.model_copy(
+                update={
+                    "phase": "failed",
+                    "message": "The app restarted during the build. Start the server to try it, "
+                    "or delete it and create it again.",
+                }
+            )
+        return build
+
+    def is_building(self, server_id: str) -> bool:
+        with self._lock:
+            b = self._builds.get(server_id)
+        return b is not None and b.phase in BUILD_ACTIVE_PHASES
+
     def _info_from_container(self, c) -> ServerInfo:
         status, error = self._status_of(c)
         server_id = _label(c, "id")
+        build = self.get_build(server_id)
+        if build is not None:
+            if build.phase in BUILD_ACTIVE_PHASES:
+                status, error = ("installing" if build.phase == "installing" else "testing"), ""
+            elif build.phase == "failed" and status not in ("running", "starting"):
+                status, error = "error", build.message
         return ServerInfo(
             id=server_id,
             name=_label(c, "name", server_id),
@@ -158,6 +231,7 @@ class DockerManager:
             data_path=self._host_data_path(server_id),
             created_at=_label(c, "created_at"),
             error=error,
+            build=build,
         )
 
     def _used_ports(self) -> dict[int, str]:
@@ -229,10 +303,11 @@ class DockerManager:
         with self._lock:
             self._pending[server_id] = info
 
+        auto_fix = req.auto_fix and req.source != "vanilla"
         if background:
-            threading.Thread(target=self._provision, args=(info, env), daemon=True).start()
+            threading.Thread(target=self._provision, args=(info, env, auto_fix), daemon=True).start()
         else:
-            self._provision(info, env)
+            self._provision(info, env, auto_fix)
         return info
 
     def _set_pending(self, server_id: str, **changes) -> None:
@@ -240,69 +315,71 @@ class DockerManager:
             if server_id in self._pending:
                 self._pending[server_id] = self._pending[server_id].model_copy(update=changes)
 
-    def _provision(self, info: ServerInfo, env: dict[str, str]) -> None:
+    def pull_image(self, java_version: str) -> str:
+        image = f"{self.settings.mc_image}:{java_version}"
         try:
-            image = f"{self.settings.mc_image}:{info.java_version}"
-            try:
-                self.client.images.get(image)
-            except ImageNotFound:
-                log.info("Pulling %s", image)
-                self.client.images.pull(self.settings.mc_image, tag=info.java_version)
+            self.client.images.get(image)
+        except ImageNotFound:
+            log.info("Pulling %s", image)
+            self.client.images.pull(self.settings.mc_image, tag=java_version)
+        return image
 
+    def mods_dir(self, server_id: str) -> str:
+        return os.path.join(self._local_data_path(server_id), "mods")
+
+    def local_data_path(self, server_id: str) -> str:
+        return self._local_data_path(server_id)
+
+    def create_container(self, info: ServerInfo, env: dict[str, str], restart: bool = True, start: bool = True):
+        """(Re)create the server's container from info and env, replacing any old one."""
+        old = self._get_container(info.id)
+        if old is not None:
+            old.remove(force=True)
+        env = {**env, "UID": str(self.settings.mc_uid), "GID": str(self.settings.mc_gid)}
+        labels = {MANAGED_LABEL: "true", **{LABEL_PREFIX + k: str(getattr(info, k)) for k in INFO_LABELS}}
+        # JVM needs room beyond the heap; give it 25% (min 1 GB) of headroom.
+        overhead_mb = max(1024, info.memory_gb * 256)
+        kwargs = dict(
+            image=f"{self.settings.mc_image}:{info.java_version}",
+            name=info.container_name,
+            environment=env,
+            labels=labels,
+            ports={MC_PORT: info.port},
+            volumes={info.data_path: {"bind": "/data", "mode": "rw"}},
+            mem_limit=f"{info.memory_gb * 1024 + overhead_mb}m",
+            restart_policy={"Name": "unless-stopped" if restart else "no"},
+            stdin_open=True,
+            tty=True,
+            detach=True,
+        )
+        if self.settings.docker_network:
+            kwargs["network"] = self.settings.docker_network
+        container = self.client.containers.create(**kwargs)
+        if start:
+            try:
+                container.start()
+            except APIError as e:
+                container.remove(force=True)
+                raise e
+        with self._lock:
+            self._pending.pop(info.id, None)
+        return container
+
+    def _provision(self, info: ServerInfo, env: dict[str, str], auto_fix: bool = False) -> None:
+        try:
+            self.pull_image(info.java_version)
             self._set_pending(info.id, status="creating")
             os.makedirs(self._local_data_path(info.id), exist_ok=True)
             try:
                 os.chown(self._local_data_path(info.id), self.settings.mc_uid, self.settings.mc_gid)
             except (PermissionError, OSError):
                 pass  # not fatal: itzg fixes ownership of /data on start when run as root
+            if auto_fix:
+                from .server_builder import ServerBuilder
 
-            env = {**env, "UID": str(self.settings.mc_uid), "GID": str(self.settings.mc_gid)}
-            labels = {
-                MANAGED_LABEL: "true",
-                **{
-                    LABEL_PREFIX + k: str(getattr(info, k))
-                    for k in (
-                        "id",
-                        "name",
-                        "source",
-                        "project_id",
-                        "project_slug",
-                        "version_id",
-                        "pack_title",
-                        "minecraft_version",
-                        "loader",
-                        "port",
-                        "memory_gb",
-                        "java_version",
-                        "created_at",
-                    )
-                },
-            }
-            # JVM needs room beyond the heap; give it 25% (min 1 GB) of headroom.
-            overhead_mb = max(1024, info.memory_gb * 256)
-            kwargs = dict(
-                image=image,
-                name=info.container_name,
-                environment=env,
-                labels=labels,
-                ports={MC_PORT: info.port},
-                volumes={info.data_path: {"bind": "/data", "mode": "rw"}},
-                mem_limit=f"{info.memory_gb * 1024 + overhead_mb}m",
-                restart_policy={"Name": "unless-stopped"},
-                stdin_open=True,
-                tty=True,
-                detach=True,
-            )
-            if self.settings.docker_network:
-                kwargs["network"] = self.settings.docker_network
-            container = self.client.containers.create(**kwargs)
-            try:
-                container.start()
-            except APIError as e:
-                container.remove(force=True)
-                raise e
-            with self._lock:
-                self._pending.pop(info.id, None)
+                ServerBuilder(self).run(info, env)
+            else:
+                self.create_container(info, env)
         except (DockerException, OSError) as e:
             log.exception("Failed to create server %s", info.id)
             msg = getattr(e, "explanation", None) or str(e)
@@ -310,6 +387,8 @@ class DockerManager:
 
     def start_server(self, server_id: str) -> ServerInfo:
         c = self._require(server_id)
+        # A failed build leaves the container without auto-restart; turn it back on.
+        c.update(restart_policy={"Name": "unless-stopped"})
         c.start()
         c.reload()
         return self._info_from_container(c)
@@ -328,10 +407,15 @@ class DockerManager:
         return self._info_from_container(c)
 
     def delete_server(self, server_id: str, delete_data: bool = False) -> None:
-        c = self._get_container(server_id)
         with self._lock:
             pending = self._pending.pop(server_id, None)
-        if c is None and pending is None:
+            if server_id in self._builds:
+                self._cancelled.add(server_id)
+                building = True
+            else:
+                building = False
+        c = self._get_container(server_id)
+        if c is None and pending is None and not building:
             raise ServerNotFound(server_id)
         if c is not None:
             c.remove(force=True)
@@ -353,7 +437,13 @@ class DockerManager:
             return info.error or "Server is still being set up..."
         return c.logs(tail=tail).decode("utf-8", errors="replace")
 
+    def is_cancelled(self, server_id: str) -> bool:
+        with self._lock:
+            return server_id in self._cancelled
+
     def _require(self, server_id: str):
+        if self.is_building(server_id):
+            raise ServerConflict("The server is still being built and tested. Wait for it to finish.")
         c = self._get_container(server_id)
         if c is None:
             with self._lock:

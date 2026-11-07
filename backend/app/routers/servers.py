@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 
 from ..config import settings
-from ..models.server import CreateServerRequest, ServerInfo
+from ..models.server import BuildInfo, CreateServerRequest, ServerInfo
 from ..services.docker_manager import DockerManager, ServerConflict, ServerNotFound
 from ..services.itzg_env import EnvBuildError
 
@@ -82,3 +82,10 @@ def delete_server(
 @router.get("/{server_id}/logs", response_class=PlainTextResponse)
 def server_logs(server_id: str, mgr: Manager, tail: Annotated[int, Query(ge=1, le=5000)] = 200):
     return _call(mgr.get_logs, server_id, tail=tail)
+
+
+@router.get("/{server_id}/build", response_model=BuildInfo | None)
+def server_build(server_id: str, mgr: Manager):
+    """The automatic install-and-test build report, if the server had one."""
+    _call(mgr.get_server, server_id)
+    return mgr.get_build(server_id)
