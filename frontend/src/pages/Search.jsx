@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
+import CurseForgeImport from "../components/CurseForgeImport.jsx";
 import PackCard from "../components/PackCard.jsx";
 import SimilarPacks from "../components/SimilarPacks.jsx";
 import VersionPicker from "../components/VersionPicker.jsx";
@@ -30,6 +31,7 @@ export default function Search({ onCreate, onOpenSettings }) {
   const [picking, setPicking] = useState(null);
   // When set, the results area shows packs that share mods with this pack.
   const [similarTo, setSimilarTo] = useState(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     api.sources().then(setSources).catch(() => {});
@@ -150,6 +152,9 @@ export default function Search({ onCreate, onOpenSettings }) {
               </option>
             ))}
           </select>
+          <button onClick={() => setImporting(true)} title="Build a server from a CurseForge link, no API key needed">
+            Paste CurseForge link
+          </button>
         </div>
         <p className="count">
           {loading ? "Searching…" : `${result.total.toLocaleString()} modpacks`}
@@ -191,6 +196,15 @@ export default function Search({ onCreate, onOpenSettings }) {
         )}
       </section>
 
+      {importing && (
+        <CurseForgeImport
+          onClose={() => setImporting(false)}
+          onCreate={(p) => {
+            setImporting(false);
+            onCreate(p);
+          }}
+        />
+      )}
       {picking && (
         <VersionPicker
           pack={picking}

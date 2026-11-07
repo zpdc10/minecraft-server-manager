@@ -74,11 +74,28 @@ def _custom_env(req: CreateServerRequest, settings: Settings) -> dict[str, str]:
     return {"TYPE": server_type, "VERSION": pack.minecraft_version, version_var: pack.loader_version}
 
 
+def _cfimport_env(req: CreateServerRequest, settings: Settings) -> dict[str, str]:
+    """A CurseForge pack imported from a link or upload, without an API key.
+
+    The pack is downloaded into /data before the container starts, and the loader
+    variables (TYPE, VERSION, FORGE_VERSION...) are added from its manifest then.
+    """
+    from .cf_import import UPLOAD_PREFIX
+
+    pid = req.project_id
+    if not (pid.isdigit() or pid.startswith(UPLOAD_PREFIX)):
+        raise EnvBuildError("Imported CurseForge servers need a project id or an uploaded pack")
+    if pid.isdigit() and not req.version_id.isdigit():
+        raise EnvBuildError("Pick which file of the pack to install")
+    return {}
+
+
 SOURCE_ENV_BUILDERS: dict[str, Callable[[CreateServerRequest, Settings], dict[str, str]]] = {
     "modrinth": _modrinth_env,
     "curseforge": _curseforge_env,
     "vanilla": _vanilla_env,
     "custom": _custom_env,
+    "cfimport": _cfimport_env,
 }
 
 

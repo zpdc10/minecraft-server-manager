@@ -49,6 +49,16 @@ function BuildSummary({ build }) {
         {build.phase === "passed" && "✓ "}
         {build.message}
       </div>
+      {build.notes?.length > 0 && (
+        <details>
+          <summary>Pack download notes</summary>
+          <ul className="mcsm-removed">
+            {build.notes.map((n, i) => (
+              <li key={i}>{n}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       {build.removed.length > 0 && (
         <details>
           <summary>
