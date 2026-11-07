@@ -2,7 +2,7 @@ function compact(n) {
   return Intl.NumberFormat("en", { notation: "compact" }).format(n);
 }
 
-export default function PackCard({ pack, onCreate }) {
+export default function PackCard({ pack, onCreate, onSimilar, children }) {
   const versions = pack.game_versions;
   const versionLabel =
     versions.length === 0 ? "" : versions.length === 1 ? versions[0] : `${versions[0]} – ${versions[versions.length - 1]}`;
@@ -28,19 +28,27 @@ export default function PackCard({ pack, onCreate }) {
         {versionLabel && <span className="tag">{versionLabel}</span>}
         {!pack.server_supported && <span className="tag warn">Client-only</span>}
       </div>
+      {children}
       <div className="card-foot">
         <span className="stats">⬇ {compact(pack.downloads)} · ♥ {compact(pack.follows)}</span>
-        <button
-          className="primary"
-          onClick={onCreate}
-          title={
-            pack.server_supported
-              ? undefined
-              : "This pack is made for the client. The server builder installs it, removes client-only mods and tests that it starts."
-          }
-        >
-          {pack.server_supported ? "Create server" : "Build server"}
-        </button>
+        <div className="card-actions">
+          {onSimilar && pack.source === "modrinth" && (
+            <button onClick={onSimilar} title="Find packs that share mods with this one">
+              Similar
+            </button>
+          )}
+          <button
+            className="primary"
+            onClick={onCreate}
+            title={
+              pack.server_supported
+                ? undefined
+                : "This pack is made for the client. The server builder installs it, removes client-only mods and tests that it starts."
+            }
+          >
+            {pack.server_supported ? "Create server" : "Build server"}
+          </button>
+        </div>
       </div>
     </article>
   );

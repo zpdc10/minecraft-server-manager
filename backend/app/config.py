@@ -54,6 +54,9 @@ class Settings:
     build_max_removals: int = field(default_factory=lambda: int(os.environ.get("BUILD_MAX_REMOVALS", "15")))
     build_install_timeout: int = field(default_factory=lambda: int(os.environ.get("BUILD_INSTALL_TIMEOUT", "3600")))
     build_start_timeout: int = field(default_factory=lambda: int(os.environ.get("BUILD_START_TIMEOUT", "1200")))
+    # --- Similar packs ---
+    # How many of the most downloaded Modrinth packs the similar-pack index covers.
+    similar_index_size: int = field(default_factory=lambda: int(os.environ.get("SIMILAR_INDEX_SIZE", "1000")))
     static_dir: str = field(default_factory=lambda: os.environ.get("STATIC_DIR", "/app/static"))
 
 
