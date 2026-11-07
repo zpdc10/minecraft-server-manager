@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import PackCard from "../components/PackCard.jsx";
+import SimilarPacks from "../components/SimilarPacks.jsx";
 import VersionPicker from "../components/VersionPicker.jsx";
 
 const SORTS = [
@@ -27,6 +28,8 @@ export default function Search({ onCreate, onOpenSettings }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [picking, setPicking] = useState(null);
+  // When set, the results area shows packs that share mods with this pack.
+  const [similarTo, setSimilarTo] = useState(null);
 
   useEffect(() => {
     api.sources().then(setSources).catch(() => {});
@@ -118,7 +121,20 @@ export default function Search({ onCreate, onOpenSettings }) {
         </button>
       </aside>
 
-      <section className="results">
+      {similarTo && (
+        <SimilarPacks
+          pack={similarTo}
+          gameVersion={gameVersion}
+          loader={loader}
+          onBack={() => setSimilarTo(null)}
+          onCreate={setPicking}
+          onSimilar={(p) => {
+            setSimilarTo(p);
+            window.scrollTo(0, 0);
+          }}
+        />
+      )}
+      <section className="results" hidden={similarTo !== null}>
         <div className="toolbar">
           <input
             className="query"
@@ -149,7 +165,15 @@ export default function Search({ onCreate, onOpenSettings }) {
         </p>
         <div className="grid">
           {result.hits.map((pack) => (
-            <PackCard key={`${pack.source}:${pack.id}`} pack={pack} onCreate={() => setPicking(pack)} />
+            <PackCard
+              key={`${pack.source}:${pack.id}`}
+              pack={pack}
+              onCreate={() => setPicking(pack)}
+              onSimilar={() => {
+                setSimilarTo(pack);
+                window.scrollTo(0, 0);
+              }}
+            />
           ))}
         </div>
         {pages > 1 && (
