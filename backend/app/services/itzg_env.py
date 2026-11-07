@@ -51,10 +51,34 @@ def _vanilla_env(req: CreateServerRequest, settings: Settings) -> dict[str, str]
     return {"TYPE": "VANILLA", "VERSION": req.minecraft_version or "LATEST"}
 
 
+# itzg TYPE and the variable that pins the loader version, per pack loader.
+CUSTOM_LOADER_ENV = {
+    "fabric": ("FABRIC", "FABRIC_LOADER_VERSION"),
+    "quilt": ("QUILT", "QUILT_LOADER_VERSION"),
+    "forge": ("FORGE", "FORGE_VERSION"),
+    "neoforge": ("NEOFORGE", "NEOFORGE_VERSION"),
+}
+
+
+def _custom_env(req: CreateServerRequest, settings: Settings) -> dict[str, str]:
+    """A pack made in the pack builder. Its mods are copied into /data/mods before start."""
+    from .pack_store import PackNotFound, get
+
+    try:
+        pack = get(req.project_id)
+    except PackNotFound as e:
+        raise EnvBuildError(f"Custom pack '{req.project_id}' not found") from e
+    if not pack.loader_version:
+        raise EnvBuildError(f"Pick a {pack.loader} version for the pack first")
+    server_type, version_var = CUSTOM_LOADER_ENV[pack.loader]
+    return {"TYPE": server_type, "VERSION": pack.minecraft_version, version_var: pack.loader_version}
+
+
 SOURCE_ENV_BUILDERS: dict[str, Callable[[CreateServerRequest, Settings], dict[str, str]]] = {
     "modrinth": _modrinth_env,
     "curseforge": _curseforge_env,
     "vanilla": _vanilla_env,
+    "custom": _custom_env,
 }
 
 

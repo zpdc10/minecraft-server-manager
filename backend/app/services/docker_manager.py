@@ -255,6 +255,8 @@ class DockerManager:
                 os.chown(self._local_data_path(info.id), self.settings.mc_uid, self.settings.mc_gid)
             except (PermissionError, OSError):
                 pass  # not fatal: itzg fixes ownership of /data on start when run as root
+            if info.source == "custom":
+                self._install_custom_pack(info)
 
             env = {**env, "UID": str(self.settings.mc_uid), "GID": str(self.settings.mc_gid)}
             labels = {
@@ -303,10 +305,22 @@ class DockerManager:
                 raise e
             with self._lock:
                 self._pending.pop(info.id, None)
-        except (DockerException, OSError) as e:
+        except (DockerException, OSError, RuntimeError) as e:
             log.exception("Failed to create server %s", info.id)
             msg = getattr(e, "explanation", None) or str(e)
             self._set_pending(info.id, status="error", error=f"Could not create server: {msg}")
+
+    def _install_custom_pack(self, info: ServerInfo) -> None:
+        """Copy a pack-builder pack's server mods into the server folder before it starts."""
+        from . import pack_install, pack_store
+
+        try:
+            pack = pack_store.get(info.project_id)
+        except pack_store.PackNotFound as e:
+            raise RuntimeError(f"Custom pack '{info.project_id}' was deleted") from e
+        notes = pack_install.install(pack, self._local_data_path(info.id), self.settings.mc_uid, self.settings.mc_gid)
+        for note in notes:
+            log.info("Server %s: %s", info.id, note)
 
     def start_server(self, server_id: str) -> ServerInfo:
         c = self._require(server_id)
