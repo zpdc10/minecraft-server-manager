@@ -57,6 +57,12 @@ class Settings:
     # --- Similar packs ---
     # How many of the most downloaded Modrinth packs the similar-pack index covers.
     similar_index_size: int = field(default_factory=lambda: int(os.environ.get("SIMILAR_INDEX_SIZE", "1000")))
+    # --- Backups ---
+    # Where world backups go, inside this container. A folder chosen on the Settings page wins.
+    # Empty means /backups if that is mounted, otherwise <DATA_DIR>/backups.
+    backup_dir: str = field(default_factory=lambda: os.environ.get("BACKUP_DIR", ""))
+    # Seconds to wait after "save-all flush" before copying, for older servers that save asynchronously.
+    backup_flush_wait: float = field(default_factory=lambda: float(os.environ.get("BACKUP_FLUSH_WAIT", "3")))
     static_dir: str = field(default_factory=lambda: os.environ.get("STATIC_DIR", "/app/static"))
 
 

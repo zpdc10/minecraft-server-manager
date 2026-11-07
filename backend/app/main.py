@@ -1,5 +1,7 @@
 """FastAPI entry point. Routers are mounted under /api; the built web UI is served from /."""
 
+import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -8,10 +10,23 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import APP_VERSION, settings
 from .providers import ProviderError
-from .routers import custom_packs, mod_db, search, servers, similar
+from .routers import backups, custom_packs, mod_db, search, servers, similar
 from .routers import settings as settings_router
 
-app = FastAPI(title="Minecraft Server Manager", version=APP_VERSION)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Scheduled world backups. BACKUP_SCHEDULER=false turns them off (e.g. for a dev copy).
+    scheduler = None
+    if os.environ.get("BACKUP_SCHEDULER", "true").lower() not in ("0", "false", "no"):
+        scheduler = backups.get_backups()
+        scheduler.start_scheduler()
+    yield
+    if scheduler is not None:
+        scheduler.stop_scheduler()
+
+
+app = FastAPI(title="Minecraft Server Manager", version=APP_VERSION, lifespan=lifespan)
 
 app.include_router(search.router)
 app.include_router(settings_router.router)
@@ -19,6 +34,7 @@ app.include_router(servers.router)
 app.include_router(mod_db.router)
 app.include_router(custom_packs.router)
 app.include_router(similar.router)
+app.include_router(backups.router)
 
 
 @app.exception_handler(ProviderError)

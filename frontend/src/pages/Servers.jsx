@@ -7,6 +7,7 @@ import {
   startServer,
   stopServer,
 } from "../api/servers.js";
+import BackupsDialog from "../components/BackupsDialog.jsx";
 import CreateServerDialog from "../components/CreateServerDialog.jsx";
 import "../components/servers.css";
 
@@ -153,6 +154,7 @@ export default function Servers() {
   const [busyId, setBusyId] = useState(null);
   const [logsFor, setLogsFor] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [backupsFor, setBackupsFor] = useState(null);
   const [creatingVanilla, setCreatingVanilla] = useState(false);
 
   const refresh = useCallback(() => {
@@ -236,6 +238,9 @@ export default function Servers() {
                   </>
                 )}
                 <button onClick={() => setLogsFor(s)}>Logs</button>
+                <button disabled={settingUp} onClick={() => setBackupsFor(s)}>
+                  Backups
+                </button>
                 <button className="mcsm-danger" disabled={busy} onClick={() => setDeleting(s)}>
                   Delete
                 </button>
@@ -246,6 +251,13 @@ export default function Servers() {
       </div>
 
       {logsFor && <LogsPanel server={logsFor} onClose={() => setLogsFor(null)} />}
+      {backupsFor && (
+        <BackupsDialog
+          server={servers?.find((x) => x.id === backupsFor.id) || backupsFor}
+          onClose={() => setBackupsFor(null)}
+          onChanged={refresh}
+        />
+      )}
       {deleting && <DeleteDialog server={deleting} onClose={() => setDeleting(null)} onDeleted={refresh} />}
       <CreateServerDialog
         open={creatingVanilla}

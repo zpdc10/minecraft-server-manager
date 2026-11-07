@@ -44,3 +44,23 @@
 .mcsm-build { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
 .mcsm-build summary { cursor: pointer; }
 .mcsm-removed { margin: 6px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Backups dialog */
+.mcsm-backups { max-width: 720px; }
+.mcsm-backups h3.mcsm-subhead { margin: 8px 0 0; font-size: 1rem; }
+.mcsm-backup-now { display: flex; gap: 8px; flex-wrap: wrap; }
+.mcsm-backup-now select { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); }
+.mcsm-backup-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mcsm-backup-list li { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.mcsm-backup-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mcsm-backup-schedule { display: flex; flex-direction: column; gap: 10px; }
+.mcsm-confirm { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.mcsm-confirm p { margin: 6px 0; }
+a.mcsm-button {
+  display: inline-flex; align-items: center; padding: 6px 12px; border: 1px solid var(--border);
+  border-radius: 6px; color: inherit; text-decoration: none; background: var(--chip); font-size: inherit;
+}
+@media (max-width: 560px) { .mcsm-row { flex-direction: column; } }
+.mcsm-dialog label.mcsm-check { flex: none; }
+.mcsm-dialog label.mcsm-check input { width: auto; flex: none; padding: 0; margin: 2px 0 0; }
+.mcsm-backup-now select { width: auto; flex: 1; min-width: 180px; }
