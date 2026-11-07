@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-ServerSource = Literal["modrinth", "curseforge", "vanilla", "custom"]
+ServerSource = Literal["modrinth", "curseforge", "vanilla", "custom", "cfimport"]
 JavaVersion = Literal["java8", "java11", "java16", "java17", "java21", "latest"]
 ServerStatus = Literal[
     "pulling",  # downloading the server image
@@ -80,6 +80,8 @@ class BuildInfo(BaseModel):
     attempts: list[BuildAttempt] = Field(default_factory=list)
     started_at: str = ""
     finished_at: str = ""
+    # What happened while the pack was downloaded (imported CurseForge packs).
+    notes: list[str] = Field(default_factory=list)
 
 
 class ServerInfo(BaseModel):
