@@ -114,6 +114,8 @@ def _image_tag(image: str) -> str:
 def looks_like_minecraft(attrs: dict) -> bool:
     """Whether a container (its `docker inspect` attrs) runs a Minecraft server."""
     config = attrs.get("Config") or {}
+    if (config.get("Labels") or {}).get(f"{LABEL_PREFIX}shell_for"):
+        return False  # a shell helper container (services/shell.py), not a server
     repo = _image_repo((config.get("Image") or "").lower())
     if _NOT_SERVER_RE.search(repo):
         return False

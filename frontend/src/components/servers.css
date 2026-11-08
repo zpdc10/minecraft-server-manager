@@ -126,3 +126,20 @@ a.mcsm-button {
 .mcsm-import-head { display: flex; gap: 12px; align-items: center; }
 .mcsm-import-head img { border-radius: 8px; object-fit: cover; }
 .mcsm-update { background: #1e88e533; color: #42a5f5; }
+
+/* Shell tab */
+.mcsm-shell { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+.mcsm-shell-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.mcsm-shell-bar button { margin-left: auto; }
+.mcsm-terminal { flex: 1; min-height: 320px; background: #111318; border-radius: 6px; padding: 6px; overflow: hidden; }
+.mcsm-shell-script { flex-wrap: wrap; }
+
+.mcsm-shell-args { width: 140px; }
+.mcsm-packmode { border-top: 1px solid var(--border, #8884); padding-top: 8px; }
+.mcsm-shell .mcsm-inline-form { flex: none; align-items: center; }
+.mcsm-shell .mcsm-inline-form input[type="checkbox"], .mcsm-shell-bar input[type="checkbox"] { flex: none; width: auto; padding: 0; margin: 0; }
+.mcsm-shell label.mcsm-check { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.mcsm-packmode select { flex: none; width: auto; min-width: 160px; }
+.mcsm-shell-script label.mcsm-check { flex: none; }
+.mcsm-shell-script input.mcsm-shell-args { flex: none; width: 140px; }
+.mcsm-shell-script > input:first-child { flex: 1 1 240px; }

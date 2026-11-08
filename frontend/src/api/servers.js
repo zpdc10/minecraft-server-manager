@@ -34,6 +34,12 @@ export const deleteServer = (id, deleteData = false) =>
 export const getBuild = (id) => request(`/${encodeURIComponent(id)}/build`);
 export const getLogs = (id, tail = 300) => request(`/${encodeURIComponent(id)}/logs?tail=${tail}`);
 
+// Shell helpers and pack modes
+export const prepareScript = (id) => request(`/${encodeURIComponent(id)}/shell/prepare`, { method: "POST" });
+export const getPackMode = (id) => request(`/${encodeURIComponent(id)}/pack-mode`);
+export const switchPackMode = (id, mode) =>
+  request(`/${encodeURIComponent(id)}/pack-mode`, { method: "POST", body: JSON.stringify({ mode }) });
+
 // World backups
 const backups = (id) => `/${encodeURIComponent(id)}/backups`;
 export const listBackups = (id) => request(backups(id));

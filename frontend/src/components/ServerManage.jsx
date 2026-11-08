@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   deleteMod,
   getLogs,
@@ -15,6 +15,8 @@ import {
   uploadMod,
 } from "../api/servers.js";
 import PublicAddressTab from "./PublicAddressTab.jsx";
+// The terminal (xterm.js) is only loaded when the Shell tab is opened.
+const ShellTab = lazy(() => import("./ShellTab.jsx"));
 import "./servers.css";
 
 const TABS = [
@@ -22,6 +24,7 @@ const TABS = [
   ["players", "Players"],
   ["properties", "server.properties"],
   ["mods", "Mods"],
+  ["shell", "Shell"],
   ["public", "Public address"],
   ["settings", "Settings"],
 ];
@@ -683,6 +686,11 @@ export default function ServerManage({ server, onClose, onChanged, initialTab = 
           {tab === "players" && <PlayersTab server={server} />}
           {tab === "properties" && <PropertiesTab server={server} running={running} />}
           {tab === "mods" && <ModsTab server={server} running={running} />}
+          {tab === "shell" && (
+            <Suspense fallback={<p className="mcsm-muted">Loading terminal...</p>}>
+              <ShellTab server={server} />
+            </Suspense>
+          )}
           {tab === "public" && <PublicAddressTab server={server} />}
           {tab === "settings" && <SettingsTab server={server} running={running} onChanged={onChanged} />}
         </div>

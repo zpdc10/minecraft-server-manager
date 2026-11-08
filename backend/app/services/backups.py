@@ -33,9 +33,9 @@ from .docker_manager import DockerManager, ServerConflict, ServerNotFound
 log = logging.getLogger(__name__)
 
 MANIFEST = "mcsm-backup.json"
-KINDS = ("manual", "scheduled", "pre-restore", "pre-update")
+KINDS = ("manual", "scheduled", "pre-restore", "pre-update", "pre-script")
 # Backups the retention rules may delete. Manual backups are only deleted by the user.
-AUTO_KINDS = {"scheduled", "pre-restore", "pre-update"}
+AUTO_KINDS = {"scheduled", "pre-restore", "pre-update", "pre-script"}
 BACKUP_NAME_RE = re.compile(r"^(?P<server>[a-z0-9-]+)_(?P<ts>\d{8}-\d{6})_(?P<kind>[a-z-]+)\.zip$")
 TS_FORMAT = "%Y%m%d-%H%M%S"
 # Small files saved with a world backup: they matter for the world (who may join, who is op).
