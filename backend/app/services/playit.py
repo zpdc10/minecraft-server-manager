@@ -25,7 +25,8 @@ from ..config import USER_AGENT
 log = logging.getLogger(__name__)
 
 CONTAINER_NAME = "mcsm_playit"
-IMAGE = os.environ.get("PLAYIT_IMAGE", "playitcloud/playit:0.15.19")
+# The image playit.gg's own Docker setup wizard uses.
+IMAGE = os.environ.get("PLAYIT_IMAGE", "ghcr.io/playit-cloud/playit-agent:1.0")
 COMPONENT_LABEL = "mcsm.component"
 DOH_URL = os.environ.get("DOH_URL", "https://cloudflare-dns.com/dns-query")
 _HOST_RE = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$", re.I)
@@ -88,7 +89,8 @@ def ensure_agent(manager, secret_key: str) -> None:
         c = None
     if c is not None:
         env = dict(e.split("=", 1) for e in (c.attrs.get("Config", {}).get("Env") or []) if "=" in e)
-        if env.get("SECRET_KEY") == secret_key:
+        image = c.attrs.get("Config", {}).get("Image") or IMAGE
+        if env.get("SECRET_KEY") == secret_key and image == IMAGE:
             if c.status != "running":
                 c.start()
             return
