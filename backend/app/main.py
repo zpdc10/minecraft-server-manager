@@ -19,6 +19,7 @@ from .routers import (
     search,
     server_admin,
     servers,
+    shell,
     similar,
     updates,
 )
@@ -40,6 +41,11 @@ async def lifespan(_: FastAPI):
 
         cf_sync = SyncLoop(get_manager)
         cf_sync.start()
+    if os.environ.get("SHELL_HELPER_CLEANUP", "true").lower() not in ("0", "false", "no"):
+        from .routers.servers import get_manager
+        from .services.shell import cleanup_helpers
+
+        cleanup_helpers(get_manager())
     yield
     if scheduler is not None:
         scheduler.stop_scheduler()
@@ -60,6 +66,7 @@ app.include_router(backups.router)
 app.include_router(cloudflare.router)
 app.include_router(cf_import.router)
 app.include_router(updates.router)
+app.include_router(shell.router)
 
 
 @app.exception_handler(ProviderError)
