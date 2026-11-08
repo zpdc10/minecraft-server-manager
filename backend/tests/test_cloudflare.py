@@ -360,3 +360,11 @@ def test_disconnect_keeps_playit(env):
     (route,) = client.get("/api/cloudflare/routes").json()
     assert route["connect_address"] == "abc.joinmc.link"
     assert "mcsm_playit" in {c.name for c in docker.containers.list(all=True)}
+
+
+def test_playit_agent_uses_official_image(env):
+    _, client, docker = env
+    client.put("/api/cloudflare/playit", json={"secret_key": "secret-abc"})
+    c = docker.containers.get("mcsm_playit")
+    assert c.kwargs["image"] == "ghcr.io/playit-cloud/playit-agent:1.0"
+    assert "ghcr.io/playit-cloud/playit-agent:1.0" in docker.images.pulled

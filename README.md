@@ -153,7 +153,7 @@ gives each new server an address such as `survival.example.com` (turn this off t
 | `BACKUP_SCHEDULER` | `true` | Set to `false` to turn scheduled backups off for this install |
 | `CLOUDFLARE_API_TOKEN` | (empty) | Cloudflare API token. A token saved on the Settings page overrides this |
 | `CLOUDFLARE_SYNC` | `true` | Set to `false` to stop the 10-minute check of tunnel ports and the public IP |
-| `PLAYIT_IMAGE` | `playitcloud/playit:0.15.19` | Image for the playit.gg agent |
+| `PLAYIT_IMAGE` | `ghcr.io/playit-cloud/playit-agent:1.0` | Image for the playit.gg agent |
 | `CLOUDFLARED_IMAGE` | `cloudflare/cloudflared:latest` | Image for the app's tunnel connector |
 | `MODRINTH_API_URL` | `https://api.modrinth.com/v2` | Override the Modrinth API base URL |
 
