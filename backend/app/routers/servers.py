@@ -51,6 +51,11 @@ def create_server(req: CreateServerRequest, mgr: Manager):
 
     info = _call(mgr.create_server, req)
     on_server_created(info.id, info.port)
+    if info.source == "cfimport":
+        from ..services.pack_updates import UpdateManager
+
+        # Keep the pack's CurseForge link so it can be checked for new versions later.
+        UpdateManager(mgr, None).remember_created(info, req.pack_url)
     return info
 
 

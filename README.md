@@ -12,6 +12,7 @@ Servers run on the [`itzg/minecraft-server`](https://github.com/itzg/docker-mine
 - [x] Build servers from client-only packs: install, test-start, and remove client-only or crashing mods automatically
 - [x] Pack builder: assemble a custom pack from Modrinth and CurseForge mods, run it as a server, export it for launchers
 - [x] World backups: manual and scheduled, with retention, restore, download and a configurable backup folder
+- [x] Modpack updates: check every server for a newer pack version, then back up, update, test-start and roll back if it fails
 - [ ] Console, whitelist, remote access
 
 ## Install on Unraid
@@ -82,6 +83,24 @@ and optionally delete ones older than N days. Manual backups are never deleted a
 - **Where.** `/backups` if it is mapped into the container (the Unraid template maps it, defaulting to
   `appdata/minecraft-server-manager/backups`; point it at a share to keep backups off the cache drive), otherwise
   `$DATA_DIR/backups`. The folder can also be changed on the Settings page. Backups stay when a server is deleted.
+
+## Modpack updates
+
+The Servers page checks every Modrinth, CurseForge and imported CurseForge server for a newer version of its pack
+(results are cached for an hour; **Check for updates** asks again). A server with a newer version gets an
+**Update available** badge and an **Update** button.
+
+- **What counts as newer.** Versions released after the one the server runs, for the same loader. The suggested one
+  is the newest release for the same Minecraft version; betas and versions that move to another Minecraft version
+  can still be picked, with a warning.
+- **Imported CurseForge packs.** The pack's CurseForge link is saved in the server folder (`.mcsm/updates.json`)
+  when the server is made, so it can be checked again without an API key. A pack uploaded as a zip has no link: the
+  app looks for it on CurseForge by name, and the Updates dialog lets you paste the right link.
+- **Updating.** The server is stopped, the whole server folder is backed up (a "before update" backup), the new
+  version is installed (imported packs get their old mods cleared and the new ones downloaded), and the server is
+  test-started with the same auto-fix as the first build. If it starts, it stays on the new version (and is left
+  stopped if it was stopped). If it doesn't, the backup is restored and the old container put back, so nothing
+  changes; the failed test report stays in the update history.
 
 ## Public addresses with Cloudflare
 
@@ -243,6 +262,10 @@ Dockerfile           multi-stage build: UI, then Python runtime
 | `POST /api/cloudflare/sync` | Repair the connector and bring ports and IPs up to date |
 | `GET /api/cloudflare/routes` | Public addresses with player instructions |
 | `PUT /api/cloudflare/routes/{server_id}` · `DELETE` | Create or change `{subdomain, mode, playit_address}` / remove a server's address |
+| `GET /api/updates?refresh=false` | Every modpack server and whether a newer pack version is out |
+| `GET /api/servers/{id}/updates?refresh=false` | One server's update check, running update and past updates |
+| `PUT /api/servers/{id}/updates/link` | Set the CurseForge link of an imported pack `{url}` |
+| `POST /api/servers/{id}/updates` | Back up, update to `{version_id}`, test-start, roll back on failure |
 | `GET /api/health` | Health check |
 
 ## Development

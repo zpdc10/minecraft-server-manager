@@ -137,6 +137,7 @@ class ModrinthProvider:
                 game_versions=v.get("game_versions", []),
                 loaders=v.get("loaders", []),
                 published=v.get("date_published"),
+                release_type=v.get("version_type") or "release",
             )
             for v in data
         ]

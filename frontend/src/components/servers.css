@@ -125,3 +125,4 @@ a.mcsm-button {
 .mcsm-import-pack { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
 .mcsm-import-head { display: flex; gap: 12px; align-items: center; }
 .mcsm-import-head img { border-radius: 8px; object-fit: cover; }
+.mcsm-update { background: #1e88e533; color: #42a5f5; }

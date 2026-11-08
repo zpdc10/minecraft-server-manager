@@ -3,6 +3,7 @@ import {
   deleteServer,
   getLogs,
   listServers,
+  listUpdates,
   recreateServer,
   restartServer,
   startServer,
@@ -11,6 +12,7 @@ import {
 import BackupsDialog from "../components/BackupsDialog.jsx";
 import CreateServerDialog from "../components/CreateServerDialog.jsx";
 import ServerManage from "../components/ServerManage.jsx";
+import UpdatesDialog from "../components/UpdatesDialog.jsx";
 import "../components/servers.css";
 import { api } from "../api.js";
 
@@ -178,6 +180,24 @@ export default function Servers() {
   const [backupsFor, setBackupsFor] = useState(null);
   const [creatingVanilla, setCreatingVanilla] = useState(false);
   const [publicRoutes, setPublicRoutes] = useState({});
+  const [updates, setUpdates] = useState({});
+  const [updatesFor, setUpdatesFor] = useState(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+
+  const loadUpdates = useCallback((refresh = false) => {
+    if (refresh) setCheckingUpdates(true);
+    return listUpdates(refresh)
+      .then((rows) => setUpdates(Object.fromEntries(rows.map((r) => [r.server_id, r]))))
+      .catch(() => {})
+      .finally(() => setCheckingUpdates(false));
+  }, []);
+
+  // Update checks are cached by the app for an hour, so this is cheap.
+  useEffect(() => {
+    loadUpdates();
+    const timer = setInterval(() => loadUpdates(), 30000);
+    return () => clearInterval(timer);
+  }, [loadUpdates]);
 
   const refresh = useCallback(() => {
     listServers()
@@ -216,7 +236,12 @@ export default function Servers() {
     <div className="mcsm-servers">
       <div className="mcsm-servers-head">
         <h1>Servers</h1>
-        <button onClick={() => setCreatingVanilla(true)}>New vanilla server</button>
+        <div className="mcsm-card-actions">
+          <button disabled={checkingUpdates} onClick={() => loadUpdates(true)}>
+            {checkingUpdates ? "Checking..." : "Check for updates"}
+          </button>
+          <button onClick={() => setCreatingVanilla(true)}>New vanilla server</button>
+        </div>
       </div>
 
       {error && <p className="mcsm-error">{error}</p>}
@@ -231,6 +256,10 @@ export default function Servers() {
           const isUp = ["running", "starting"].includes(s.status);
           const settingUp = ["pulling", "creating", "installing", "testing"].includes(s.status);
           const missing = s.status === "missing";
+          const upd = updates[s.id];
+          const updatable = s.managed && ["modrinth", "curseforge", "cfimport"].includes(s.source) && !missing;
+          const updateAvailable = upd?.check?.update_available;
+          const updating = Boolean(s.busy);
           const details = [
             s.pack_title || (s.source === "vanilla" ? "Vanilla" : s.project_slug || s.project_id || s.image),
             s.minecraft_version && `MC ${s.minecraft_version}`,
@@ -243,6 +272,11 @@ export default function Servers() {
                 <div className="mcsm-card-title">
                   <strong>{s.name}</strong>
                   <StatusBadge status={s.status} />
+                  {updateAvailable && !updating && (
+                    <span className="mcsm-badge mcsm-update" title={upd.check.latest?.name}>
+                      Update available
+                    </span>
+                  )}
                   {!s.managed && (
                     <span className="mcsm-badge" title={`Container ${s.container_name} (${s.image})`}>
                       Found on host
@@ -263,6 +297,13 @@ export default function Servers() {
                 )}
                 {s.error && !s.build && <div className="mcsm-error mcsm-small">{s.error}</div>}
                 {s.note && <div className="mcsm-muted mcsm-small">{s.note}</div>}
+                {updating && <div className="mcsm-small mcsm-muted">⏳ {s.busy}</div>}
+                {updateAvailable && !updating && upd.check.latest && (
+                  <div className="mcsm-small">
+                    New version: <strong>{upd.check.latest.name}</strong>
+                    {upd.check.current_name && <span className="mcsm-muted"> (installed: {upd.check.current_name})</span>}
+                  </div>
+                )}
                 <BuildSummary build={s.build} />
               </div>
               <div className="mcsm-card-actions">
@@ -271,12 +312,12 @@ export default function Servers() {
                     {busy ? "Working..." : "Recreate container"}
                   </button>
                 )}
-                {!isUp && !settingUp && !missing && (
+                {!isUp && !settingUp && !missing && !updating && (
                   <button disabled={busy} onClick={() => act(s, startServer)}>
                     Start
                   </button>
                 )}
-                {isUp && !settingUp && (
+                {isUp && !settingUp && !updating && (
                   <>
                     <button disabled={busy} onClick={() => act(s, stopServer)}>
                       {busy ? "Working..." : "Stop"}
@@ -286,9 +327,18 @@ export default function Servers() {
                     </button>
                   </>
                 )}
-                {!settingUp && !missing && (
+                {!settingUp && !missing && !updating && (
                   <button className="mcsm-primary" onClick={() => setManageId(s.id)}>
                     Manage
+                  </button>
+                )}
+                {updatable && (
+                  <button
+                    className={updateAvailable && !updating ? "mcsm-primary" : ""}
+                    disabled={settingUp && !updating}
+                    onClick={() => setUpdatesFor(s)}
+                  >
+                    {updating ? "Updating..." : updateAvailable ? "Update" : "Updates"}
                   </button>
                 )}
                 {!missing && <button onClick={() => setLogsFor(s)}>Logs</button>}
@@ -300,7 +350,7 @@ export default function Servers() {
                   Backups
                 </button>
                 {s.managed && (
-                  <button className="mcsm-danger" disabled={busy} onClick={() => setDeleting(s)}>
+                  <button className="mcsm-danger" disabled={busy || updating} onClick={() => setDeleting(s)}>
                     {missing ? "Remove" : "Delete"}
                   </button>
                 )}
@@ -323,6 +373,19 @@ export default function Servers() {
           server={servers?.find((x) => x.id === backupsFor.id) || backupsFor}
           onClose={() => setBackupsFor(null)}
           onChanged={refresh}
+        />
+      )}
+      {updatesFor && (
+        <UpdatesDialog
+          server={servers?.find((x) => x.id === updatesFor.id) || updatesFor}
+          onClose={() => {
+            setUpdatesFor(null);
+            loadUpdates();
+          }}
+          onChanged={() => {
+            refresh();
+            loadUpdates();
+          }}
         />
       )}
       {deleting && <DeleteDialog server={deleting} onClose={() => setDeleting(null)} onDeleted={refresh} />}

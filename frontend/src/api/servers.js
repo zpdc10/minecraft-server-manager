@@ -71,3 +71,14 @@ export const uploadMod = (id, file) =>
 export const setModEnabled = (id, file, enabled) =>
   request(`${sid(id)}/mods/${encodeURIComponent(file)}/${enabled ? "enable" : "disable"}`, { method: "POST" });
 export const deleteMod = (id, file) => request(`${sid(id)}/mods/${encodeURIComponent(file)}`, { method: "DELETE" });
+
+// ---- Modpack updates ----
+export const listUpdates = (refresh = false) =>
+  fetch(`/api/updates?refresh=${refresh}`).then(async (r) => {
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || `${r.status} ${r.statusText}`);
+    return r.json();
+  });
+export const getServerUpdates = (id, refresh = false) => request(`${sid(id)}/updates?refresh=${refresh}`);
+export const linkPack = (id, url) => request(`${sid(id)}/updates/link`, json("PUT", { url }));
+export const startUpdate = (id, versionId) =>
+  request(`${sid(id)}/updates`, json("POST", { version_id: versionId }));

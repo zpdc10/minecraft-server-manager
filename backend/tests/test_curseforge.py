@@ -178,6 +178,7 @@ def test_versions_paginate_and_skip_server_packs(key):
         "game_versions": ["1.21.1"],
         "loaders": ["neoforge"],
         "published": "2026-08-01T00:00:00Z",
+        "release_type": "release",
     }
 
 
