@@ -33,9 +33,9 @@ from .docker_manager import DockerManager, ServerConflict, ServerNotFound
 log = logging.getLogger(__name__)
 
 MANIFEST = "mcsm-backup.json"
-KINDS = ("manual", "scheduled", "pre-restore")
+KINDS = ("manual", "scheduled", "pre-restore", "pre-update")
 # Backups the retention rules may delete. Manual backups are only deleted by the user.
-AUTO_KINDS = {"scheduled", "pre-restore"}
+AUTO_KINDS = {"scheduled", "pre-restore", "pre-update"}
 BACKUP_NAME_RE = re.compile(r"^(?P<server>[a-z0-9-]+)_(?P<ts>\d{8}-\d{6})_(?P<kind>[a-z-]+)\.zip$")
 TS_FORMAT = "%Y%m%d-%H%M%S"
 # Small files saved with a world backup: they matter for the world (who may join, who is op).
@@ -441,6 +441,31 @@ class BackupManager:
             run()
         return job
 
+    def take_backup(self, server_id: str, kind: str, scope: str) -> BackupInfo:
+        """Take a backup now, in this thread, and return it. Raises on failure."""
+        job = BackupJob(action="backup", kind=kind, started_at=_iso(_now()), message="Starting backup...")
+        lock = self._begin(server_id, job)
+        try:
+            info = self._backup(server_id, kind, scope)
+        except Exception as e:
+            self._end(server_id, lock, _result("backup", False, f"Backup failed: {e}"))
+            raise
+        self._end(server_id, lock, _result("backup", True, f"Backup {info.id} saved ({_human(info.size_bytes)})."))
+        return info
+
+    def restore_now(self, server_id: str, backup_id: str) -> str:
+        """Put a backup's files back, in this thread, without a safety copy first."""
+        path = self.backup_path(server_id, backup_id)
+        job = BackupJob(action="restore", backup_id=backup_id, started_at=_iso(_now()), message="Restoring...")
+        lock = self._begin(server_id, job)
+        try:
+            msg = self._restore(server_id, path, safety=False)
+        except Exception as e:
+            self._end(server_id, lock, _result("restore", False, f"Restore failed: {e}"))
+            raise
+        self._end(server_id, lock, _result("restore", True, msg))
+        return msg
+
     # ---- RCON --------------------------------------------------------------------
 
     def _running_container(self, server_id: str):
@@ -597,7 +622,7 @@ class BackupManager:
 
     # ---- restore -----------------------------------------------------------------
 
-    def _restore(self, server_id: str, path: str) -> str:
+    def _restore(self, server_id: str, path: str, safety: bool = True) -> str:
         data = self.mgr.local_data_path(server_id)
         manifest = self._read_manifest(path) or {}
         scope = manifest.get("scope") if manifest.get("scope") in ("world", "full") else "world"
@@ -641,8 +666,8 @@ class BackupManager:
             self._set_message(server_id, "Saving a safety backup of the current world...")
             current = self.world_paths(data) if scope == "world" else self._full_paths(data)
             current = [p for p in current if p not in (RESTORE_TMP, RESTORE_OLD)]
-            safety = ""
-            if any(os.path.exists(os.path.join(data, p)) for p in current):
+            want_safety, safety = safety, ""
+            if want_safety and any(os.path.exists(os.path.join(data, p)) for p in current):
                 try:
                     safety = self._backup(server_id, "pre-restore", scope).id
                 except BackupError:

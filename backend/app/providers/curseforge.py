@@ -128,6 +128,7 @@ def _to_version(f: dict) -> PackVersion:
         game_versions=[t for t in tags if t[:1].isdigit()],
         loaders=sorted({t.lower() for t in tags if t.lower() in LOADER_IDS}),
         published=f.get("fileDate"),
+        release_type={1: "release", 2: "beta", 3: "alpha"}.get(f.get("releaseType"), "release"),
     )
 
 

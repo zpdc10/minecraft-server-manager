@@ -96,6 +96,7 @@ export default function CurseForgeImport({ onClose, onCreate }) {
       projectSlug: pack.slug,
       versionId: file.id,
       title: pack.title,
+      packUrl: pack.url,
       minecraftVersion: file.minecraft_version,
       loader: file.loader,
       // Without a server pack, the client pack has to be cleaned of client-only mods.

@@ -37,6 +37,7 @@ export default function CreateServerDialog({
   minecraftVersion = "",
   loader = "",
   clientOnly = false,
+  packUrl = "",
 }) {
   const [name, setName] = useState(title);
   const [port, setPort] = useState(25565);
@@ -80,6 +81,7 @@ export default function CreateServerDialog({
         memory_gb: Number(memory),
         java_version: java || null,
         auto_fix: source !== "vanilla" && (autoFix || clientOnly),
+        pack_url: packUrl,
       });
       onCreated?.(server);
       onClose?.();

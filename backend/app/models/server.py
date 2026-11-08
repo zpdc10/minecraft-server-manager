@@ -41,6 +41,8 @@ class CreateServerRequest(BaseModel):
     # Install the pack, test-start it, and remove client-only or crashing mods until
     # it starts. Only used for modpacks.
     auto_fix: bool = True
+    # The pack's page (imported CurseForge packs), kept so the app can check it for updates.
+    pack_url: str = Field(default="", max_length=500)
 
     @field_validator("name")
     @classmethod
@@ -110,3 +112,5 @@ class ServerInfo(BaseModel):
     # Whether the app can see the server's files (backups, mods, server.properties).
     files_available: bool = True
     note: str = ""
+    # Set while a long job (a pack update) is running on the server: what it is doing.
+    busy: str = ""

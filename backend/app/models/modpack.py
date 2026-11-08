@@ -48,3 +48,5 @@ class PackVersion(BaseModel):
     game_versions: list[str]
     loaders: list[str]
     published: str | None = None
+    # release | beta | alpha
+    release_type: str = "release"

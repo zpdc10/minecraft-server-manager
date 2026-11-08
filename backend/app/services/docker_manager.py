@@ -145,6 +145,8 @@ class DockerManager:
         # Builds running in this process, and builds the user cancelled by deleting.
         self._builds: dict[str, BuildInfo] = {}
         self._cancelled: set[str] = set()
+        # Servers in the middle of a long job (a pack update), with what is happening.
+        self._busy: dict[str, str] = {}
         self._mounts: list[dict] | None = None
         self._self_id: str | None = None
 
@@ -450,6 +452,7 @@ class DockerManager:
             created_at=meta.get("created_at", ""),
             error=error,
             build=build,
+            busy=self.busy(server_id),
         )
 
     def _external_mount(self, c) -> str:
@@ -863,6 +866,8 @@ class DockerManager:
             raise ServerConflict(
                 "This server wasn't created by the app, so the app won't delete it. Remove it from Unraid's Docker tab."
             )
+        if self.busy(server_id):
+            raise ServerConflict("The server is being updated. Wait for the update to finish, then delete it.")
         with self._lock:
             pending = self._pending.pop(server_id, None)
             if server_id in self._builds:
@@ -896,11 +901,25 @@ class DockerManager:
             return info.error or "Server is still being set up..."
         return c.logs(tail=tail).decode("utf-8", errors="replace")
 
+    def set_busy(self, server_id: str, message: str | None) -> None:
+        """Mark a server as in the middle of a job (None clears it). Start/stop/delete wait for it."""
+        with self._lock:
+            if message is None:
+                self._busy.pop(server_id, None)
+            else:
+                self._busy[server_id] = message
+
+    def busy(self, server_id: str) -> str:
+        with self._lock:
+            return self._busy.get(server_id, "")
+
     def is_cancelled(self, server_id: str) -> bool:
         with self._lock:
             return server_id in self._cancelled
 
     def _require(self, server_id: str):
+        if self.busy(server_id):
+            raise ServerConflict("The server is being updated. Wait for the update to finish.")
         if self.is_building(server_id):
             raise ServerConflict("The server is still being built and tested. Wait for it to finish.")
         c = self._get_container(server_id)

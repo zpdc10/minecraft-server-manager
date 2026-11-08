@@ -19,7 +19,7 @@ const INTERVALS = [
   [10080, "1 week"],
 ];
 
-const KIND_LABELS = { manual: "Manual", scheduled: "Scheduled", "pre-restore": "Before restore" };
+const KIND_LABELS = { manual: "Manual", scheduled: "Scheduled", "pre-restore": "Before restore", "pre-update": "Before update" };
 
 export function formatBytes(n) {
   if (n == null) return "";
